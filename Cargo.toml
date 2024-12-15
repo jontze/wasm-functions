@@ -1,0 +1,5 @@
+
+
+[workspace]
+members = ["wasm-function-hello", "wasm-function-runtime"]
+resolver = "2"
