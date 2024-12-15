@@ -2012,6 +2012,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "wasm-function-http"
+version = "0.1.0"
+dependencies = [
+ "wit-bindgen-rt",
+]
+
+[[package]]
 name = "wasm-function-runtime"
 version = "0.1.0"
 dependencies = [

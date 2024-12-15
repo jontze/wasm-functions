@@ -1,0 +1,27 @@
+package jontze:function-http;
+
+world function-http {
+    /// Represents a general HTTP header, e.g. ("Content-Type", "application/json")
+    record header {
+        name: string,
+        value: string,
+    }
+
+    /// Represents an inbound HTTP request to your serverless function.
+    record request {
+        method: string,
+        path: string,
+        /// Key-value pairs representing the request headers
+        headers: list<header>,
+        /// Raw request body bytes (could be JSON, form data, etc.)
+        body: list<u8>,
+    }
+
+    record response {
+        status-code: u16,
+        headers: list<header>,
+        body: list<u8>,
+    }
+
+    export handle-request: func(req: request) -> result<response>;
+}
