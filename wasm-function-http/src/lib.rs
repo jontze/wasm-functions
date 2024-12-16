@@ -6,8 +6,17 @@ use bindings::Guest;
 struct Component;
 
 impl Guest for Component {
-    fn handle_request(req: bindings::Request) -> Result<bindings::Response, ()> {
-        todo!()
+    fn handle_request(_req: bindings::Request) -> Result<bindings::Response, ()> {
+        let res = bindings::Response {
+            headers: vec![],
+            status_code: 200,
+            body: "Module executed".as_bytes().to_vec(),
+        };
+        Ok(res)
+    }
+
+    fn path() -> String {
+        "hello".to_string()
     }
 }
 

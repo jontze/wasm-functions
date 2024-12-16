@@ -6,58 +6,96 @@ use axum::{
     Router,
 };
 use futures::StreamExt;
-use std::{collections::HashMap, ops::Deref, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
-use wasmtime::{
-    component::{Component, Instance, Linker},
-    Config, Engine, Store,
-};
-use wasmtime_wasi::{ResourceTable, WasiCtx, WasiCtxBuilder, WasiView};
+use wasmtime::{Config, Engine};
 
-type PluginRegistry = Arc<RwLock<HashMap<String, Instance>>>;
+mod component;
 
-struct MyState {
-    ctx: WasiCtx,
-    table: ResourceTable,
+mod bindings_function_http {
+    wasmtime::component::bindgen!({
+        world: "function-http",
+        async: true
+    });
 }
 
-impl WasiView for MyState {
-    fn ctx(&mut self) -> &mut WasiCtx {
-        &mut self.ctx
-    }
-    fn table(&mut self) -> &mut ResourceTable {
-        &mut self.table
+type PluginRegistry = HashMap<String, Vec<u8>>;
+
+struct RuntimeState {
+    registry: PluginRegistry,
+    config: Config,
+    engine: Engine,
+}
+
+type RuntimeStateRef = Arc<RwLock<RuntimeState>>;
+
+impl RuntimeState {
+    fn new() -> Self {
+        let mut config = Config::new();
+        config.wasm_component_model(true);
+        config.async_support(true);
+
+        let engine = Engine::new(&config).expect("Failed to create engine");
+        Self {
+            registry: HashMap::new(),
+            config,
+            engine,
+        }
     }
 }
 
 #[tokio::main]
 async fn main() {
-    let registry: PluginRegistry = Arc::new(RwLock::new(HashMap::new()));
+    let runtime_state: RuntimeStateRef = Arc::new(RwLock::new(RuntimeState::new()));
 
     let app = Router::new()
-        .route("/:path", get(handle_request))
-        .route("/deploy", post(deploy_module))
-        .with_state(registry);
+        .route("/api/:path", get(handle_request))
+        .route("/deploy", post(deploy_http_function))
+        .with_state(runtime_state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+
     axum::serve(listener, app).await.unwrap();
 }
 
 async fn handle_request(
     Path(path): Path<String>,
-    state: State<PluginRegistry>,
+    State(state): State<RuntimeStateRef>,
 ) -> impl IntoResponse {
-    let registry = state.deref().read().await;
-    if registry.get(&path).is_some() {
-        "Module executed"
+    let state = state.read().await;
+    if state.registry.contains_key(&path) {
+        let precompiled_bytes = state.registry.get(&path).unwrap();
+        let engine = &state.engine;
+
+        let mut http_function_builder =
+            unsafe { component::http::FunctionHttpBuilder::deserialize(engine, precompiled_bytes) };
+        let http_function = http_function_builder.build().await;
+
+        let req = bindings_function_http::Request {
+            path: "/".to_string(),
+            query_params: vec![],
+            method: bindings_function_http::Method::Get,
+            body: vec![],
+            headers: vec![],
+        };
+
+        let ret = http_function
+            .call_handle_request(&mut http_function_builder.store, &req)
+            .await
+            .expect("Failed to call function")
+            .expect("Function returned a failure");
+
+        (StatusCode::OK, [("Content-Type", "text/plain")], ret.body).into_response()
     } else {
-        "Module not found"
+        "Module not found".into_response()
     }
 }
 
-async fn deploy_module(State(_): State<PluginRegistry>, request: Request) -> impl IntoResponse {
+async fn deploy_http_function(
+    State(runtime_state): State<RuntimeStateRef>,
+    request: Request,
+) -> impl IntoResponse {
     let mut body_stream = request.into_body().into_data_stream();
-
     let mut wasm_bytes: Vec<u8> = vec![];
     while let Some(chunk) = body_stream.next().await {
         match chunk {
@@ -66,43 +104,23 @@ async fn deploy_module(State(_): State<PluginRegistry>, request: Request) -> imp
         }
     }
 
-    let mut config = Config::new();
-    config.wasm_component_model(true);
-    let engine = Engine::new(&config).expect("Failed to create engine");
-
-    let component = match Component::from_binary(&engine, &wasm_bytes) {
-        Ok(component) => component,
-        Err(_) => return (StatusCode::BAD_REQUEST, "Failed to create component").into_response(),
+    let mut http_function_builder = {
+        let engine = &runtime_state.read().await.engine;
+        component::http::FunctionHttpBuilder::from_binary(engine, &wasm_bytes)
     };
 
-    let res_table = ResourceTable::new();
-    let wasi_ctx = WasiCtxBuilder::new().inherit_env().build();
+    let instance = http_function_builder.build().await;
 
-    let mut store = Store::new(
-        &engine,
-        MyState {
-            ctx: wasi_ctx,
-            table: res_table,
-        },
-    );
-    let mut linker = Linker::new(&engine);
-    wasmtime_wasi::add_to_linker_sync(&mut linker).expect("Failed to add WASI to linker");
+    let path = instance
+        .call_path(&mut http_function_builder.store)
+        .await
+        .expect("Failed to get path");
 
-    let instance = linker
-        .instantiate(&mut store, &component)
-        .expect("Failed to instantiate module");
+    {
+        let mut state = runtime_state.write().await;
+        let precombiled_binaries = http_function_builder.serialize();
+        state.registry.insert(path.clone(), precombiled_binaries);
+    }
 
-    let hello_world_func = instance
-        .get_typed_func::<(), (String,)>(&mut store, "hello-world")
-        .expect("Failed to get function");
-
-    let ret = hello_world_func
-        .call(&mut store, ())
-        .expect("Failed to call function");
-
-    println!("Result: {:?}", ret);
-
-    //println!("Path: {:?}", path);
-
-    "Module Deployed".into_response()
+    format!("Module Deployed to '/api/{path}'").into_response()
 }
