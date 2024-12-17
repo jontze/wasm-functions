@@ -22,7 +22,7 @@ pub(crate) async fn run_server() {
     let runtime_state: RuntimeStateRef =
         std::sync::Arc::new(tokio::sync::RwLock::new(RuntimeState::new(db_pool)));
 
-    let app = crate::routes::create_routes::<RuntimeStateRef>()
+    let app = crate::routes::create_routes()
         .with_state(runtime_state)
         .layer(tower_http::trace::TraceLayer::new_for_http());
 

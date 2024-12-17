@@ -2,3 +2,5 @@
 .env
 *.sqlite
 *.sqlite3
+local_test/
+wasm_functions/

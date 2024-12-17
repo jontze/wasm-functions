@@ -1,23 +1,52 @@
 use axum::{extract::State, response::IntoResponse, routing::post};
 
-pub(crate) fn router<TState>() -> axum::routing::Router<TState>
-where
-    TState: Clone + Send + Sync + 'static,
-{
-    axum::Router::<TState>::new().route("/deployV2", post(deploy_function_with_manifest))
+use crate::{domain, server_state::RuntimeStateRef, services::function_service};
+
+pub(crate) fn router() -> axum::routing::Router<RuntimeStateRef> {
+    axum::Router::new().route("/deploy", post(deploy_function_with_manifest))
+}
+
+#[derive(Default)]
+pub(crate) struct CreateHttpFunctionPayload {
+    pub name: String,
+    pub method: String,
+    pub path: String,
+    pub wasm_bytes: Vec<u8>,
 }
 
 async fn deploy_function_with_manifest(
+    State(state): axum::extract::State<RuntimeStateRef>,
     mut multipart: axum::extract::Multipart,
 ) -> impl IntoResponse {
-    while let Some(field) = multipart.next_field().await.expect("Failed to read file") {
-        let name = field.name().expect("Failed to get field name");
-        let file_name = field.file_name().expect("Failed to get file name");
-        let content_type = field.content_type().expect("Failed to get content type");
-        dbg!(name, file_name, content_type);
+    let mut payload = CreateHttpFunctionPayload::default();
 
-        let data = field.bytes().await.expect("Failed to read field");
+    while let Some(field) = multipart.next_field().await.expect("Failed to read file") {
+        match field.file_name().expect("Failed to get file name") {
+            "manifest.toml" => {
+                let data = field.bytes().await.expect("Failed to read field");
+                let manifest = toml::from_str::<domain::manifest::Manifest>(
+                    std::str::from_utf8(&data).expect("Failed to parse manifest"),
+                )
+                .expect("Failed to parse manifest");
+
+                payload.name = manifest.name;
+                payload.method = manifest.method;
+                payload.path = manifest.path;
+            }
+            file_name => {
+                if file_name.ends_with(".wasm") {
+                    let data = field.bytes().await.expect("Failed to read field");
+                    payload.wasm_bytes = data.to_vec();
+                } else {
+                    panic!("Invalid file name: {}", file_name);
+                }
+            }
+        };
     }
 
-    todo!("Implement function");
+    {
+        function_service::create(&state.read().await.db, payload).await;
+    }
+
+    "OK".into_response()
 }

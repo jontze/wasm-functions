@@ -5,7 +5,7 @@ pub(crate) enum Function {
     Scheduled(ScheduledFunction),
 }
 
-pub(crate) trait WasmFunction {
+pub(crate) trait WasmFunctionTrait {
     fn related_wasm(&self) -> String;
 }
 
@@ -16,9 +16,20 @@ pub(crate) struct HttpFunction {
     pub(crate) method: String,
 }
 
-impl WasmFunction for HttpFunction {
+impl WasmFunctionTrait for HttpFunction {
     fn related_wasm(&self) -> String {
         format!("http_{}_{}_{}.wasm", self.name, self.method, self.uuid)
+    }
+}
+
+impl From<entity::http_function::Model> for HttpFunction {
+    fn from(http_function: entity::http_function::Model) -> Self {
+        Self {
+            uuid: http_function.id,
+            name: http_function.name,
+            method: http_function.method,
+            path: http_function.path,
+        }
     }
 }
 
@@ -28,8 +39,18 @@ pub(crate) struct ScheduledFunction {
     pub(crate) cron: String,
 }
 
-impl WasmFunction for ScheduledFunction {
+impl WasmFunctionTrait for ScheduledFunction {
     fn related_wasm(&self) -> String {
         format!("scheduled_{}_{}.wasm", self.name, self.uuid)
+    }
+}
+
+impl From<entity::scheduled_function::Model> for ScheduledFunction {
+    fn from(scheduled_function: entity::scheduled_function::Model) -> Self {
+        Self {
+            name: scheduled_function.name,
+            uuid: scheduled_function.id,
+            cron: scheduled_function.cron,
+        }
     }
 }
