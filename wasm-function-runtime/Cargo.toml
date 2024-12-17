@@ -4,12 +4,23 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-axum = "0.7.9"
+axum = { version = "0.7.9", features = ["multipart"] }
 futures = "0.3.31"
 tokio = { version = "1.42.0", features = ["full"] }
+tower-http = { version = "0.6.2", features = ["trace"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+uuid = { version = "1.11.0", features = ["v4"] }
 wasmtime = { version = "27.0.0", features = [
     "runtime",
     "component-model",
     "cranelift",
 ] }
 wasmtime-wasi = "27.0.0"
+sea-orm = { version = "1.1.2", features = [
+    "sqlx-sqlite",
+    "runtime-tokio-rustls",
+    "macros",
+    "with-uuid",
+] }
+migration = { path = "../migration" }

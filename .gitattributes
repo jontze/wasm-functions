@@ -1,0 +1,14 @@
+# Ensure all text files use LF line endings
+* text eol=lf
+
+# Explicitly set line endings for specific file types
+*.sh text eol=lf
+*.rs text eol=lf
+*.toml text eol=lf
+*.md text eol=lf
+
+# Binary files should be treated as binary and not converted
+*.png binary
+*.jpg binary
+*.gif binary
+*.zip binary
