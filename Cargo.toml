@@ -1,11 +1,5 @@
 
 
 [workspace]
-members = [
-    "wasm-function-hello",
-    "wasm-function-http",
-    "wasm-function-runtime",
-    "migration",
-    "entity",
-]
+members = ["wasm-function-runtime", "migration", "entity", "examples/*"]
 resolver = "2"
