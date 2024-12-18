@@ -44,9 +44,7 @@ async fn deploy_function_with_manifest(
         };
     }
 
-    {
-        function_service::create(&state.read().await.db, payload).await;
-    }
+    function_service::create_http_func(&state.db, payload).await;
 
     "OK".into_response()
 }

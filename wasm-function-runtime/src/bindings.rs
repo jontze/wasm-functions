@@ -12,28 +12,34 @@ impl ::core::fmt::Debug for Header {
             .finish()
     }
 }
+/// Represents a query parameter in the URL, e.g. ("name", "value")
+/// Value is a string, as it's always a string in the URL
+/// If you need to parse it into a different type, you can do so in your function
+#[derive(Clone)]
+pub struct QueryParam {
+    pub name: _rt::String,
+    pub value: _rt::String,
+}
+impl ::core::fmt::Debug for QueryParam {
+    fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+        f.debug_struct("QueryParam")
+            .field("name", &self.name)
+            .field("value", &self.value)
+            .finish()
+    }
+}
 /// Http Methods
 #[repr(u8)]
 #[derive(Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Method {
     Get,
     Post,
-    Put,
-    Delete,
-    Patch,
-    Options,
-    Head,
 }
 impl ::core::fmt::Debug for Method {
     fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
         match self {
             Method::Get => f.debug_tuple("Method::Get").finish(),
             Method::Post => f.debug_tuple("Method::Post").finish(),
-            Method::Put => f.debug_tuple("Method::Put").finish(),
-            Method::Delete => f.debug_tuple("Method::Delete").finish(),
-            Method::Patch => f.debug_tuple("Method::Patch").finish(),
-            Method::Options => f.debug_tuple("Method::Options").finish(),
-            Method::Head => f.debug_tuple("Method::Head").finish(),
         }
     }
 }
@@ -46,11 +52,6 @@ impl Method {
         match val {
             0 => Method::Get,
             1 => Method::Post,
-            2 => Method::Put,
-            3 => Method::Delete,
-            4 => Method::Patch,
-            5 => Method::Options,
-            6 => Method::Head,
             _ => panic!("invalid enum discriminant"),
         }
     }
@@ -61,7 +62,7 @@ pub struct Request {
     pub method: Method,
     pub path: _rt::String,
     /// Key-value pairs representing the query parameters in the URL
-    pub query_params: _rt::Vec<Header>,
+    pub query_params: _rt::Vec<QueryParam>,
     /// Key-value pairs representing the request headers
     pub headers: _rt::Vec<Header>,
     /// Raw request body bytes (could be JSON, form data, etc.)
@@ -95,27 +96,6 @@ impl ::core::fmt::Debug for Response {
 }
 #[doc(hidden)]
 #[allow(non_snake_case)]
-pub unsafe fn _export_path_cabi<T: Guest>() -> *mut u8 {
-    #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
-    let result0 = T::path();
-    let ptr1 = _RET_AREA.0.as_mut_ptr().cast::<u8>();
-    let vec2 = (result0.into_bytes()).into_boxed_slice();
-    let ptr2 = vec2.as_ptr().cast::<u8>();
-    let len2 = vec2.len();
-    ::core::mem::forget(vec2);
-    *ptr1.add(4).cast::<usize>() = len2;
-    *ptr1.add(0).cast::<*mut u8>() = ptr2.cast_mut();
-    ptr1
-}
-#[doc(hidden)]
-#[allow(non_snake_case)]
-pub unsafe fn __post_return_path<T: Guest>(arg0: *mut u8) {
-    let l0 = *arg0.add(0).cast::<*mut u8>();
-    let l1 = *arg0.add(4).cast::<usize>();
-    _rt::cabi_dealloc(l0, l1, 1);
-}
-#[doc(hidden)]
-#[allow(non_snake_case)]
 pub unsafe fn _export_handle_request_cabi<T: Guest>(
     arg0: i32,
     arg1: *mut u8,
@@ -144,7 +124,7 @@ pub unsafe fn _export_handle_request_cabi<T: Guest>(
             let l5 = *base.add(12).cast::<usize>();
             let len6 = l5;
             let bytes6 = _rt::Vec::from_raw_parts(l4.cast(), len6, len6);
-            Header {
+            QueryParam {
                 name: _rt::string_lift(bytes3),
                 value: _rt::string_lift(bytes6),
             }
@@ -272,23 +252,19 @@ pub unsafe fn __post_return_handle_request<T: Guest>(arg0: *mut u8) {
     }
 }
 pub trait Guest {
-    fn path() -> _rt::String;
     fn handle_request(req: Request) -> Result<Response, ()>;
 }
 #[doc(hidden)]
 macro_rules! __export_world_function_http_cabi {
     ($ty:ident with_types_in $($path_to_types:tt)*) => {
-        const _ : () = { #[export_name = "path"] unsafe extern "C" fn export_path() -> *
-        mut u8 { $($path_to_types)*:: _export_path_cabi::<$ty > () } #[export_name =
-        "cabi_post_path"] unsafe extern "C" fn _post_return_path(arg0 : * mut u8,) {
-        $($path_to_types)*:: __post_return_path::<$ty > (arg0) } #[export_name =
-        "handle-request"] unsafe extern "C" fn export_handle_request(arg0 : i32, arg1 : *
-        mut u8, arg2 : usize, arg3 : * mut u8, arg4 : usize, arg5 : * mut u8, arg6 :
-        usize, arg7 : * mut u8, arg8 : usize,) -> * mut u8 { $($path_to_types)*::
-        _export_handle_request_cabi::<$ty > (arg0, arg1, arg2, arg3, arg4, arg5, arg6,
-        arg7, arg8) } #[export_name = "cabi_post_handle-request"] unsafe extern "C" fn
-        _post_return_handle_request(arg0 : * mut u8,) { $($path_to_types)*::
-        __post_return_handle_request::<$ty > (arg0) } };
+        const _ : () = { #[export_name = "handle-request"] unsafe extern "C" fn
+        export_handle_request(arg0 : i32, arg1 : * mut u8, arg2 : usize, arg3 : * mut u8,
+        arg4 : usize, arg5 : * mut u8, arg6 : usize, arg7 : * mut u8, arg8 : usize,) -> *
+        mut u8 { $($path_to_types)*:: _export_handle_request_cabi::<$ty > (arg0, arg1,
+        arg2, arg3, arg4, arg5, arg6, arg7, arg8) } #[export_name =
+        "cabi_post_handle-request"] unsafe extern "C" fn _post_return_handle_request(arg0
+        : * mut u8,) { $($path_to_types)*:: __post_return_handle_request::<$ty > (arg0) }
+        };
     };
 }
 #[doc(hidden)]
@@ -303,19 +279,19 @@ mod _rt {
     pub fn run_ctors_once() {
         wit_bindgen_rt::run_ctors_once();
     }
-    pub unsafe fn cabi_dealloc(ptr: *mut u8, size: usize, align: usize) {
-        if size == 0 {
-            return;
-        }
-        let layout = alloc::Layout::from_size_align_unchecked(size, align);
-        alloc::dealloc(ptr, layout);
-    }
     pub unsafe fn string_lift(bytes: Vec<u8>) -> String {
         if cfg!(debug_assertions) {
             String::from_utf8(bytes).unwrap()
         } else {
             String::from_utf8_unchecked(bytes)
         }
+    }
+    pub unsafe fn cabi_dealloc(ptr: *mut u8, size: usize, align: usize) {
+        if size == 0 {
+            return;
+        }
+        let layout = alloc::Layout::from_size_align_unchecked(size, align);
+        alloc::dealloc(ptr, layout);
     }
     pub fn as_i32<T: AsI32>(t: T) -> i32 {
         t.as_i32()
@@ -411,16 +387,16 @@ pub(crate) use __export_function_http_impl as export;
 #[cfg(target_arch = "wasm32")]
 #[link_section = "component-type:wit-bindgen:0.35.0:jontze:function-http:function-http:encoded world"]
 #[doc(hidden)]
-pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 417] = *b"\
-\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\x9d\x02\x01A\x02\x01\
-A\x0f\x01r\x02\x04names\x05values\x03\0\x06header\x03\0\0\x01m\x07\x03GET\x04POS\
-T\x03PUT\x06DELETE\x05PATCH\x07OPTIONS\x04HEAD\x03\0\x06method\x03\0\x02\x01p\x01\
-\x01p}\x01r\x05\x06method\x03\x04paths\x0cquery-params\x04\x07headers\x04\x04bod\
-y\x05\x03\0\x07request\x03\0\x06\x01r\x03\x0bstatus-code{\x07headers\x04\x04body\
-\x05\x03\0\x08response\x03\0\x08\x01@\0\0s\x04\0\x04path\x01\x0a\x01j\x01\x09\0\x01\
-@\x01\x03req\x07\0\x0b\x04\0\x0ehandle-request\x01\x0c\x04\0\"jontze:function-ht\
-tp/function-http\x04\0\x0b\x13\x01\0\x0dfunction-http\x03\0\0\0G\x09producers\x01\
-\x0cprocessed-by\x02\x0dwit-component\x070.220.0\x10wit-bindgen-rust\x060.35.0";
+pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 409] = *b"\
+\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\x95\x02\x01A\x02\x01\
+A\x10\x01r\x02\x04names\x05values\x03\0\x06header\x03\0\0\x01r\x02\x04names\x05v\
+alues\x03\0\x0bquery-param\x03\0\x02\x01m\x02\x03GET\x04POST\x03\0\x06method\x03\
+\0\x04\x01p\x03\x01p\x01\x01p}\x01r\x05\x06method\x05\x04paths\x0cquery-params\x06\
+\x07headers\x07\x04body\x08\x03\0\x07request\x03\0\x09\x01r\x03\x0bstatus-code{\x07\
+headers\x07\x04body\x08\x03\0\x08response\x03\0\x0b\x01j\x01\x0c\0\x01@\x01\x03r\
+eq\x0a\0\x0d\x04\0\x0ehandle-request\x01\x0e\x04\0\"jontze:function-http/functio\
+n-http\x04\0\x0b\x13\x01\0\x0dfunction-http\x03\0\0\0G\x09producers\x01\x0cproce\
+ssed-by\x02\x0dwit-component\x070.220.0\x10wit-bindgen-rust\x060.35.0";
 #[inline(never)]
 #[doc(hidden)]
 pub fn __link_custom_section_describing_imports() {

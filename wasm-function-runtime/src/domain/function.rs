@@ -18,7 +18,7 @@ pub(crate) struct HttpFunction {
 
 impl WasmFunctionTrait for HttpFunction {
     fn related_wasm(&self) -> String {
-        format!("http_{}_{}_{}.wasm", self.name, self.method, self.uuid)
+        format!("http_{}.wasm", self.uuid)
     }
 }
 
@@ -41,7 +41,7 @@ pub(crate) struct ScheduledFunction {
 
 impl WasmFunctionTrait for ScheduledFunction {
     fn related_wasm(&self) -> String {
-        format!("scheduled_{}_{}.wasm", self.name, self.uuid)
+        format!("scheduled_{}.wasm", self.uuid)
     }
 }
 

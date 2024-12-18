@@ -14,10 +14,6 @@ impl Guest for Component {
         };
         Ok(res)
     }
-
-    fn path() -> String {
-        "hello".to_string()
-    }
 }
 
 bindings::export!(Component with_types_in bindings);
