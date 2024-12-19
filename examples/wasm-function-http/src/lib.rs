@@ -1,18 +1,14 @@
 #[allow(warnings)]
 mod bindings;
 
+use std::collections::HashMap;
+
 use bindings::Guest;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
-struct CommitDetails {
-    sha: String,
-    commit: Commit,
-}
-
-#[derive(Deserialize, Serialize)]
-struct Commit {
-    message: String,
+struct JsonResponse {
+    args: HashMap<String, String>,
 }
 
 struct Component;
@@ -21,20 +17,24 @@ impl Guest for Component {
     fn handle_request(_req: bindings::Request) -> Result<bindings::Response, ()> {
         let client = waki::Client::new();
         let response = client
-            .get("https://api.github.com/repos/jontze/wasm-functions/commits")
+            .get("https://httpbin.org/get?a=b")
+            .headers([("Content-Type", "application/json"), ("Accept", "*/*")])
             .send()
-            .map_err(|_| ())?
-            .json::<CommitDetails>()
-            .map_err(|_| ())?;
+            .expect("Failed to send request")
+            .json::<JsonResponse>()
+            .expect("Failed to parse response");
 
         // Do something with the response
         //...
 
         // Return something
         let res = bindings::Response {
-            headers: vec![],
+            headers: vec![bindings::Header {
+                name: "Content-Type".to_string(),
+                value: "application/json".to_string(),
+            }],
             status_code: 200,
-            body: serde_json::to_vec(&response).map_err(|_| ())?,
+            body: serde_json::to_vec(&response).expect("Failed to serialize response"),
         };
         Ok(res)
     }
