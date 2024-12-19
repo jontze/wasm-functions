@@ -1,0 +1,3 @@
+name = "WASM HTML Function"
+method = "GET"
+path = "/html/hello"

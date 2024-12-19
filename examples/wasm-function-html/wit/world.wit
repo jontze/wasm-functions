@@ -1,0 +1,43 @@
+package jontze:function-http;
+
+world function-http {
+    /// Represents a general HTTP header, e.g. ("Content-Type", "application/json")
+    record header {
+        name: string,
+        value: string,
+    }
+
+    // Represents a query parameter in the URL, e.g. ("name", "value")
+    // Value is a string, as it's always a string in the URL
+    // If you need to parse it into a different type, you can do so in your function
+    record query-param {
+        name: string,
+        value: string,
+    }
+
+    /// Http Methods
+    enum method {
+        GET,
+        POST,
+    }
+
+    /// Represents an inbound HTTP request to your serverless function.
+    record request {
+        method: method,        
+        path: string,
+        /// Key-value pairs representing the query parameters in the URL
+        query-params: list<query-param>,
+        /// Key-value pairs representing the request headers
+        headers: list<header>,
+        /// Raw request body bytes (could be JSON, form data, etc.)
+        body: list<u8>,
+    }
+
+    record response {
+        status-code: u16,        
+        headers: list<header>,
+        body: list<u8>,
+    }
+
+    export handle-request: func(req: request) -> result<response>;
+}
