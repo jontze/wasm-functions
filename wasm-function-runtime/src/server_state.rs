@@ -1,9 +1,9 @@
 pub(crate) type RuntimeStateRef = std::sync::Arc<RuntimeState>;
 
-pub(crate) type PluginRegistry = std::collections::HashMap<String, Vec<u8>>;
+pub(crate) type PluginRegistry = moka::future::Cache<String, Vec<u8>>;
 
 pub(crate) struct RuntimeState {
-    pub registry: tokio::sync::RwLock<PluginRegistry>,
+    pub registry: PluginRegistry,
     pub engine: wasmtime::Engine,
     pub db: crate::db::DbPool,
 }
@@ -15,8 +15,9 @@ impl RuntimeState {
         config.async_support(true);
 
         let engine = wasmtime::Engine::new(&config).expect("Failed to create engine");
+        let registry = moka::future::Cache::builder().build();
         Self {
-            registry: tokio::sync::RwLock::new(std::collections::HashMap::new()),
+            registry,
             engine,
             db,
         }
