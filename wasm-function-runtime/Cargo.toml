@@ -29,3 +29,4 @@ serde = { version = "1.0.216", features = ["derive"] }
 toml = "0.8.19"
 http = "1.2.0"
 moka = { version = "0.12.8", features = ["future"] }
+wasmtime-wasi-http = "27.0.0"

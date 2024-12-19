@@ -11,6 +11,7 @@ pub(crate) struct RuntimeState {
 impl RuntimeState {
     pub(crate) fn new(db: crate::db::DbPool) -> Self {
         let mut config = wasmtime::Config::new();
+        config.wasm_backtrace_details(wasmtime::WasmBacktraceDetails::Enable);
         config.wasm_component_model(true);
         config.async_support(true);
 
