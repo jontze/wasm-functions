@@ -12,7 +12,7 @@ pub(crate) struct DeviceCodeResponse {
 }
 
 #[allow(unused)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct TokenResponse {
     pub access_token: Option<String>,
     pub token_type: Option<String>,

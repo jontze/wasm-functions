@@ -42,7 +42,15 @@ impl<TCredStore: CredentialStoreTrait> command_executor::CommandExecutorTrait<TC
     for DeployCommand
 {
     fn execute(&self, ctx: &mut command_context::CommandContext<TCredStore>) -> miette::Result<()> {
-        deploy::execute(ctx, &self.wasm_path, self.manifest_path.as_ref())
+        let active_token = crate::auth::token_refresh::get_active_token(ctx)?;
+        let function_runtime_url = &ctx.config.function_runtime_url;
+
+        deploy::execute(
+            &active_token,
+            &function_runtime_url,
+            &self.wasm_path,
+            self.manifest_path.as_ref(),
+        )
     }
 }
 

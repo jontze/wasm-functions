@@ -4578,6 +4578,7 @@ dependencies = [
 name = "wasm-function-cli"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "clap",
  "dirs 5.0.1",
  "dotenv",
