@@ -7,7 +7,7 @@ edition = "2021"
 axum = { version = "0.7.9", features = ["multipart"] }
 futures = "0.3.31"
 tokio = { version = "1.42.0", features = ["full"] }
-tower-http = { version = "0.6.2", features = ["trace", "compression-gzip", "request-id", "util", "catch-panic", "normalize-path"] }
+tower-http = { version = "0.6.2", features = ["trace", "compression-gzip", "request-id", "util", "catch-panic", "normalize-path", "auth"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 uuid = { version = "1.11.0", features = ["v4"] }
