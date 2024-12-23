@@ -2,10 +2,15 @@ use axum::{extract::State, response::IntoResponse, routing::post};
 
 use crate::{domain, server_state::RuntimeStateRef, services::function_service};
 
-pub(crate) fn router() -> axum::routing::Router<RuntimeStateRef> {
+pub(crate) fn router(
+    app_state: crate::server_state::RuntimeStateRef,
+) -> axum::routing::Router<RuntimeStateRef> {
     axum::Router::new()
         .route("/deploy", post(deploy_function_with_manifest))
-        .route_layer(axum::middleware::from_fn(crate::middlewares::auth::auth))
+        .route_layer(axum::middleware::from_fn_with_state(
+            app_state,
+            crate::middlewares::auth::auth,
+        ))
 }
 
 #[derive(Default)]

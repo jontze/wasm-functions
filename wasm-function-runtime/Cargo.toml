@@ -7,7 +7,14 @@ edition = "2021"
 axum = { version = "0.7.9", features = ["multipart"] }
 futures = "0.3.31"
 tokio = { version = "1.42.0", features = ["full"] }
-tower-http = { version = "0.6.2", features = ["trace", "compression-gzip", "request-id", "util", "catch-panic", "normalize-path", "auth"] }
+tower-http = { version = "0.6.2", features = [
+    "trace",
+    "compression-gzip",
+    "request-id",
+    "util",
+    "catch-panic",
+    "normalize-path",
+] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 uuid = { version = "1.11.0", features = ["v4"] }
@@ -31,3 +38,8 @@ http = "1.2.0"
 moka = { version = "0.12.8", features = ["future"] }
 wasmtime-wasi-http = "27.0.0"
 tower = "0.5.2"
+jsonwebtoken = "9.3.0"
+reqwest = { version = "0.12.9", default-features = false, features = [
+    "rustls-tls",
+    "json",
+] }

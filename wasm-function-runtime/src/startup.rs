@@ -2,6 +2,7 @@ use tower_http::ServiceBuilderExt;
 use tracing::info;
 
 use crate::{
+    config::Loader,
     db,
     server_state::{RuntimeState, RuntimeStateRef},
 };
@@ -11,12 +12,14 @@ pub(crate) async fn run_server() {
         &std::env::var("DATABASE_URL").expect("DATABASE_URL environment variable must be set"),
     )
     .await;
-
     db::run_migrations(&db_pool).await;
 
-    let runtime_state: RuntimeStateRef = std::sync::Arc::new(RuntimeState::new(db_pool));
+    let app_config = crate::config::AppConfig::load();
 
-    let app = crate::routes::create_routes()
+    let runtime_state: RuntimeStateRef =
+        std::sync::Arc::new(RuntimeState::new(db_pool, app_config));
+
+    let app = crate::routes::create_routes(runtime_state.clone())
         .with_state(runtime_state)
         .layer(
             tower::ServiceBuilder::new()

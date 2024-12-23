@@ -1,6 +1,7 @@
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 mod component;
+pub(crate) mod config;
 mod db;
 pub(crate) mod domain;
 pub(crate) mod handlers;
