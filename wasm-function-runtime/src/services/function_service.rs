@@ -8,7 +8,7 @@ use tokio::{
 use crate::{
     db::DbPool,
     domain::{self, function::WasmFunctionTrait},
-    handlers::api_handler::CreateHttpFunctionPayload,
+    handlers::api_handler::{CreateHttpFunctionPayload, CreateScheduledFunctionPayload},
 };
 
 const WASM_FUNCTIONS_DIR: &str = "wasm_functions";
@@ -38,10 +38,11 @@ pub(crate) async fn create_http_func(
     payload: CreateHttpFunctionPayload,
 ) -> domain::function::HttpFunction {
     let http_function = entity::http_function::ActiveModel {
+        id: Set(Uuid::new_v4()),
         name: Set(payload.name),
         method: Set(payload.method),
         path: Set(payload.path),
-        id: Set(Uuid::new_v4()),
+        is_public: Set(payload.is_public),
     };
     let transaction = db_pool.deref().begin().await.unwrap();
 
@@ -54,6 +55,13 @@ pub(crate) async fn create_http_func(
 
     transaction.commit().await.unwrap();
     http_function
+}
+
+pub(crate) async fn create_scheduled_func(
+    db_pool: &DbPool,
+    payload: CreateScheduledFunctionPayload,
+) -> domain::function::ScheduledFunction {
+    todo!("Save and return the scheduled function")
 }
 
 async fn store_wasm_file(bytes: Vec<u8>, target_file_name: &str) {
