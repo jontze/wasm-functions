@@ -19,7 +19,7 @@ pub(crate) enum FuncKind {
 pub(crate) struct Function {
     pub name: String,
     pub trigger: FuncKind,
-    pub scope: Option<String>,
+    pub scope: String,
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug, Clone)]
@@ -28,6 +28,15 @@ pub(crate) enum HttpFuncMehod {
     Get,
     #[serde(rename = "POST")]
     Post,
+}
+
+impl ToString for HttpFuncMehod {
+    fn to_string(&self) -> String {
+        match self {
+            HttpFuncMehod::Get => "GET".to_string(),
+            HttpFuncMehod::Post => "POST".to_string(),
+        }
+    }
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug, Clone)]
@@ -63,7 +72,7 @@ mod tests_http_manifest {
         let manifest: Manifest = toml::from_str(toml_http_function_manifest).unwrap();
 
         assert_eq!(manifest.function.name, "my-http-function");
-        assert_eq!(manifest.function.scope, Some("my-scope".to_string()));
+        assert_eq!(manifest.function.scope, "my-scope");
         assert_eq!(manifest.function.trigger, FuncKind::Http);
         assert_eq!(manifest.http.as_ref().unwrap().path, "/my-http-function");
         assert_eq!(manifest.http.as_ref().unwrap().method, HttpFuncMehod::Get);
@@ -90,7 +99,7 @@ mod tests_scheduled_manifest {
         let manifest: Manifest = toml::from_str(toml_scheduled_function_manifest).unwrap();
 
         assert_eq!(manifest.function.name, "my-scheduled-function");
-        assert_eq!(manifest.function.scope, Some("my-scope".to_string()));
+        assert_eq!(manifest.function.scope, "my-scope");
         assert_eq!(manifest.function.trigger, FuncKind::Scheduled);
         assert_eq!(manifest.scheduled.as_ref().unwrap().cron, "0 0 * * *");
     }
