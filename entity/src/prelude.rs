@@ -2,3 +2,4 @@
 
 pub use super::http_function::Entity as HttpFunction;
 pub use super::scheduled_function::Entity as ScheduledFunction;
+pub use super::scope::Entity as Scope;

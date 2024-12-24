@@ -4,3 +4,4 @@ pub mod prelude;
 
 pub mod http_function;
 pub mod scheduled_function;
+pub mod scope;
