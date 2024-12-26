@@ -1,3 +1,10 @@
-name = "WASM Function with HTTP Client"
-method = "GET"
+
+[function]
+name = "http-client"
+scope = "example"
+trigger = "http"
+
+[http]
 path = "/http/client"
+method = "GET"
+public = true
