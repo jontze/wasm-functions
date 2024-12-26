@@ -20,12 +20,17 @@ impl RuntimeState {
         config.async_support(true);
 
         let engine = wasmtime::Engine::new(&config).expect("Failed to create engine");
-        let registry = moka::future::Cache::builder().build();
+        let registry = moka::future::Cache::builder()
+            .time_to_idle(
+                std::time::Duration::from_secs(60 * 60 * 24), /* 24 hours after last access */
+            )
+            .build();
         let jwk_cache = moka::future::Cache::builder()
             .time_to_live(std::time::Duration::from_secs(
-                60 * 60 * 24, /* 24 hours */
+                60 * 60 * 24, /* 24 hours after insert */
             ))
             .build();
+
         Self {
             registry,
             jwk_cache,

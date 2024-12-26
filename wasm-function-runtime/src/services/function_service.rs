@@ -15,12 +15,24 @@ const WASM_FUNCTIONS_DIR: &str = "wasm_functions";
 
 pub(crate) async fn find_http_func(
     db_pool: &DbPool,
+    scope_name: &str,
     function_path: &str,
     function_method: &str,
 ) -> Option<(domain::function::HttpFunction, Vec<u8>)> {
+    let scope = match entity::scope::Entity::find()
+        .filter(entity::scope::Column::Name.eq(scope_name))
+        .one(db_pool.deref())
+        .await
+        .expect("Failed to find scope")
+    {
+        Some(scope) => scope,
+        None => return None,
+    };
+
     let http_function = entity::http_function::Entity::find()
         .filter(entity::http_function::Column::Path.eq(format!("/{}", function_path)))
         .filter(entity::http_function::Column::Method.eq(function_method))
+        .filter(entity::http_function::Column::ScopeId.eq(scope.id))
         .one(db_pool.deref())
         .await
         .unwrap();
@@ -39,7 +51,8 @@ pub(crate) async fn create_http_func(
 ) -> domain::function::HttpFunction {
     let transaction = db_pool.start_transaction().await;
 
-    let scope = crate::services::scope_service::create_or_find_scope(&transaction, "default").await;
+    let scope =
+        crate::services::scope_service::create_or_find_scope(&transaction, &payload.scope).await;
 
     let http_function = entity::http_function::ActiveModel {
         id: Set(Uuid::new_v4()),

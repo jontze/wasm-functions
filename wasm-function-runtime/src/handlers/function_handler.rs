@@ -14,13 +14,19 @@ use crate::{
 
 pub(crate) fn router() -> axum::Router<RuntimeStateRef> {
     axum::Router::new().route(
-        "/*function_path",
+        "/:scope/*function_path",
         get(handle_get_request).post(handle_post_request),
     )
 }
 
+#[derive(Debug, serde::Deserialize)]
+struct FunctionParams {
+    scope: String,
+    function_path: String,
+}
+
 async fn handle_get_request(
-    Path(path): Path<String>,
+    Path(path): Path<FunctionParams>,
     State(state): State<RuntimeStateRef>,
     Query(query_map): Query<std::collections::HashMap<String, String>>,
     header_map: HeaderMap,
@@ -36,7 +42,7 @@ async fn handle_get_request(
 
     // Prepare the request to be passed to the function
     let req = bindings_function_http::Request {
-        path: format!("/{}", path),
+        path: format!("/{}", path.function_path),
         query_params: collect_query_params(query_map),
         headers: collect_headers(header_map),
         method: bindings_function_http::Method::Get,
@@ -58,7 +64,7 @@ async fn handle_get_request(
 }
 
 async fn handle_post_request(
-    Path(path): Path<String>,
+    Path(path): Path<FunctionParams>,
     State(state): State<RuntimeStateRef>,
     Query(query_map): Query<std::collections::HashMap<String, String>>,
     header_map: HeaderMap,
@@ -74,7 +80,7 @@ async fn handle_post_request(
 
     // Prepare the request to be passed to the function
     let req = bindings_function_http::Request {
-        path: format!("/{}", path),
+        path: format!("/{}", path.function_path),
         query_params: collect_query_params(query_map),
         headers: collect_headers(header_map),
         method: bindings_function_http::Method::Post,
@@ -97,14 +103,19 @@ async fn handle_post_request(
 
 async fn bootstrap_function(
     state: RuntimeStateRef,
-    path: &str,
+    path: &FunctionParams,
     method: &str,
 ) -> Option<(
     bindings_function_http::FunctionHttp,
     crate::component::http::FunctionHttpBuilder,
 )> {
-    if let Some(precompiled_bytes) =
-        wasm_cache_service::extract_http_func(&state.registry, &path, method).await
+    if let Some(precompiled_bytes) = wasm_cache_service::extract_http_func(
+        &state.registry,
+        &path.scope,
+        &path.function_path,
+        method,
+    )
+    .await
     {
         // If it is, execute the precompiled wasm
         let mut http_function_builder = unsafe {
@@ -117,7 +128,8 @@ async fn bootstrap_function(
     } else {
         // If it is not, check the db if there is a function for the route
         let (_, wasm_bytes) = if let Some((http_function, wasm_bytes)) =
-            function_service::find_http_func(&state.db, &path, method).await
+            function_service::find_http_func(&state.db, &path.scope, &path.function_path, method)
+                .await
         {
             (http_function, wasm_bytes)
         } else {
@@ -130,8 +142,14 @@ async fn bootstrap_function(
 
         // Then save the procompiled wasm to the cache registry to speed up future requests
         let precompiled_bytes = http_function_builder.serialize();
-        wasm_cache_service::cache_http_func(&state.registry, &path, method, &precompiled_bytes)
-            .await;
+        wasm_cache_service::cache_http_func(
+            &state.registry,
+            &path.scope,
+            &path.function_path,
+            method,
+            &precompiled_bytes,
+        )
+        .await;
 
         Some((http_function_builder.build().await, http_function_builder))
     }
