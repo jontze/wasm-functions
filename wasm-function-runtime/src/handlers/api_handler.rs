@@ -24,6 +24,7 @@ pub(crate) struct CreateHttpFunctionPayload {
 }
 
 #[derive(Default)]
+#[allow(unused)]
 pub(crate) struct CreateScheduledFunctionPayload {
     pub name: String,
     pub scope: String,
@@ -71,7 +72,7 @@ async fn deploy_function_with_manifest(
                     let payload = CreateHttpFunctionPayload {
                         name: manifest.function.name,
                         scope: manifest.function.scope,
-                        method: http.method.to_string(),
+                        method: http.method.as_ref().to_string(),
                         path: http.path.clone(),
                         is_public: http.public,
                         wasm_bytes,

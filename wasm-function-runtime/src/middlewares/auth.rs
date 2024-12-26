@@ -10,6 +10,7 @@ use tracing::error;
 
 const JWKS_ENTRY_CACHE_KEY: &str = "jwks";
 
+#[allow(unused)]
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct AuthenticatedUser {
     /// Object ID of the user
@@ -53,9 +54,9 @@ async fn authorize_user_by_token(
 ) -> Result<AuthenticatedUser, StatusCode> {
     // Only decode the header and get the key ID
     let key_id = jsonwebtoken::decode_header(token)
-        .map_err(|err| {
+        .map_err(|_| StatusCode::UNAUTHORIZED)
+        .inspect_err(|&err| {
             error!("Failed to decode token header: {:?}", err);
-            StatusCode::UNAUTHORIZED
         })
         .and_then(|header| header.kid.ok_or(StatusCode::UNAUTHORIZED))?;
 
@@ -75,19 +76,19 @@ async fn authorize_user_by_token(
     let jwk = jwks
         .find(&key_id)
         .ok_or(StatusCode::UNAUTHORIZED)
-        .map_err(|err| {
+        .inspect_err(|&err| {
             error!("Failed to find key in key set with key ID: {:?}", err);
-            err
         })?;
 
     // Create a decoding key from the JWK
-    let decoding_key = DecodingKey::from_jwk(jwk).map_err(|err| {
-        error!(
-            "Failed to create decoding key from key set: {:?} - {:?}",
-            err, jwk
-        );
-        StatusCode::UNAUTHORIZED
-    })?;
+    let decoding_key = DecodingKey::from_jwk(jwk)
+        .inspect_err(|err| {
+            error!(
+                "Failed to create decoding key from key set: {:?} - {:?}",
+                err, jwk
+            );
+        })
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
 
     let validation = {
         let mut validation = Validation::new(jsonwebtoken::Algorithm::RS256);
@@ -100,13 +101,10 @@ async fn authorize_user_by_token(
     };
 
     let token_data = jsonwebtoken::decode::<AuthenticatedUser>(token, &decoding_key, &validation)
-        .map_err(|err| {
-        match err.kind() {
-            _ => {}
-        };
-        error!("Failed to decode token: {:?}", err);
-        StatusCode::UNAUTHORIZED
-    })?;
+        .inspect_err(|err| {
+            error!("Failed to decode token: {:?}", err);
+        })
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
 
     Ok(token_data.claims)
 }
@@ -114,16 +112,16 @@ async fn authorize_user_by_token(
 async fn fetch_jwks(jwks_uri: &str) -> Result<jsonwebtoken::jwk::JwkSet, StatusCode> {
     let jwks = reqwest::get(jwks_uri)
         .await
-        .map_err(|err| {
+        .inspect_err(|err| {
             error!("Failed to fetch JWKS: {:?}", err);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?
+        })
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .json::<jsonwebtoken::jwk::JwkSet>()
         .await
-        .map_err(|err| {
+        .inspect_err(|err| {
             error!("Failed to parse JWKS: {:?}", err);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+        })
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(jwks)
 }

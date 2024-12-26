@@ -22,21 +22,14 @@ pub(crate) struct Function {
     pub scope: String,
 }
 
-#[derive(Deserialize, PartialEq, Eq, Debug, Clone)]
+#[derive(Deserialize, PartialEq, Eq, Debug, Clone, strum::AsRefStr)]
 pub(crate) enum HttpFuncMehod {
     #[serde(rename = "GET")]
+    #[strum(serialize = "GET")]
     Get,
     #[serde(rename = "POST")]
+    #[strum(serialize = "POST")]
     Post,
-}
-
-impl ToString for HttpFuncMehod {
-    fn to_string(&self) -> String {
-        match self {
-            HttpFuncMehod::Get => "GET".to_string(),
-            HttpFuncMehod::Post => "POST".to_string(),
-        }
-    }
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug, Clone)]
@@ -76,7 +69,7 @@ mod tests_http_manifest {
         assert_eq!(manifest.function.trigger, FuncKind::Http);
         assert_eq!(manifest.http.as_ref().unwrap().path, "/my-http-function");
         assert_eq!(manifest.http.as_ref().unwrap().method, HttpFuncMehod::Get);
-        assert_eq!(manifest.http.as_ref().unwrap().public, true);
+        assert!(manifest.http.as_ref().unwrap().public);
     }
 }
 

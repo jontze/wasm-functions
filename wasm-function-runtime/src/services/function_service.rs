@@ -77,8 +77,8 @@ pub(crate) async fn create_http_func(
 }
 
 pub(crate) async fn create_scheduled_func(
-    db_pool: &DbPool,
-    payload: CreateScheduledFunctionPayload,
+    _db_pool: &DbPool,
+    _payload: CreateScheduledFunctionPayload,
 ) -> domain::function::ScheduledFunction {
     todo!("Save and return the scheduled function")
 }

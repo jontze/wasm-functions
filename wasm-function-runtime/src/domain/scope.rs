@@ -2,6 +2,7 @@ use uuid::Uuid;
 
 pub(crate) struct FunctionScope {
     pub(crate) uuid: Uuid,
+    #[allow(unused)]
     pub(crate) name: String,
 }
 

@@ -47,7 +47,7 @@ impl<TCredStore: CredentialStoreTrait> command_executor::CommandExecutorTrait<TC
 
         deploy::execute(
             &active_token,
-            &function_runtime_url,
+            function_runtime_url,
             &self.wasm_path,
             self.manifest_path.as_ref(),
         )

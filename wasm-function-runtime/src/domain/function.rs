@@ -1,5 +1,6 @@
 use uuid::Uuid;
 
+#[allow(unused)]
 pub(crate) enum Function {
     Http(HttpFunction),
     Scheduled(ScheduledFunction),
@@ -11,8 +12,11 @@ pub(crate) trait WasmFunctionTrait {
 
 pub(crate) struct HttpFunction {
     pub(crate) uuid: Uuid,
+    #[allow(unused)]
     pub(crate) name: String,
+    #[allow(unused)]
     pub(crate) path: String,
+    #[allow(unused)]
     pub(crate) method: String,
 }
 
@@ -34,8 +38,10 @@ impl From<entity::http_function::Model> for HttpFunction {
 }
 
 pub(crate) struct ScheduledFunction {
+    #[allow(unused)]
     pub(crate) name: String,
     pub(crate) uuid: Uuid,
+    #[allow(unused)]
     pub(crate) cron: String,
 }
 

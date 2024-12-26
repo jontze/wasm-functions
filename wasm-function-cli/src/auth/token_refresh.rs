@@ -54,7 +54,7 @@ pub(crate) fn get_active_token<TCredStore: crate::cred_store::CredentialStoreTra
             .form(&[
                 ("grant_type", "refresh_token"),
                 ("refresh_token", &current_token.refresh_token),
-                ("client_id", &client_id),
+                ("client_id", client_id),
             ])
             .send()
             .into_diagnostic()
