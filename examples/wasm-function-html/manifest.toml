@@ -1,3 +1,9 @@
-name = "WASM HTML Function"
-method = "GET"
+[function]
+name = "html"
+scope = "example"
+trigger = "http"
+
+[http]
 path = "/html/hello"
+method = "GET"
+public = true
