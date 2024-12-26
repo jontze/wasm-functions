@@ -1,0 +1,10 @@
+target/
+wasm_functions/
+local_test/
+.env
+.env.example
+.gitattributes
+.gitignore
+*.md
+**/**/*.md
+*.sqlite
