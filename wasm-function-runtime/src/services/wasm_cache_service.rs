@@ -24,3 +24,14 @@ pub(crate) async fn cache_http_func(
         .insert(cache_key(scope_name, path, method), bytes.to_vec())
         .await;
 }
+
+pub(crate) async fn invalidate_http_func(
+    cache_registry: &crate::server_state::PluginRegistry,
+    scope_name: &str,
+    path: &str,
+    method: &str,
+) {
+    cache_registry
+        .invalidate(&cache_key(scope_name, path, method))
+        .await;
+}

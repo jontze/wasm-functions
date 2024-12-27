@@ -1,4 +1,4 @@
-use sea_orm::{prelude::*, Set};
+use sea_orm::{prelude::*, IntoActiveModel, Set, TryIntoModel};
 use std::{ops::Deref, path::Path};
 use tokio::{
     fs::File as TokioFile,
@@ -9,6 +9,7 @@ use crate::{
     db::DbPool,
     domain::{self, function::WasmFunctionTrait},
     handlers::api_handler::{CreateHttpFunctionPayload, CreateScheduledFunctionPayload},
+    services::wasm_cache_service,
 };
 
 const WASM_FUNCTIONS_DIR: &str = "wasm_functions";
@@ -47,6 +48,7 @@ pub(crate) async fn find_http_func(
 
 pub(crate) async fn create_http_func(
     db_pool: &DbPool,
+    cache_registry: &crate::server_state::PluginRegistry,
     payload: CreateHttpFunctionPayload,
 ) -> domain::function::HttpFunction {
     let transaction = db_pool.start_transaction().await;
@@ -54,23 +56,54 @@ pub(crate) async fn create_http_func(
     let scope =
         crate::services::scope_service::create_or_find_scope(&transaction, &payload.scope).await;
 
-    let http_function = entity::http_function::ActiveModel {
-        id: Set(Uuid::new_v4()),
-        name: Set(payload.name),
-        method: Set(payload.method),
-        path: Set(payload.path),
-        is_public: Set(payload.is_public),
-        scope_id: Set(scope.uuid),
-    };
+    let mut previous_http_function: Option<entity::http_function::Model> = None;
 
-    let http_function: entity::http_function::Model = http_function
-        .insert(transaction.deref())
+    let http_function: domain::function::HttpFunction = match entity::http_function::Entity::find()
+        .filter(entity::http_function::Column::ScopeId.eq(scope.uuid))
+        .filter(entity::http_function::Column::Name.eq(&payload.name))
+        .one(transaction.deref())
         .await
-        .expect("Failed to insert http function");
+        .expect("Failed to find http function")
+    {
+        Some(existing_http_function) => {
+            previous_http_function = Some(existing_http_function.clone());
 
-    let http_function: domain::function::HttpFunction = http_function.into();
+            let mut existing_http_function = existing_http_function.into_active_model();
+            existing_http_function.method = Set(payload.method);
+            existing_http_function.scope_id = Set(scope.uuid);
+            existing_http_function.path = Set(payload.path);
+            existing_http_function.is_public = Set(payload.is_public);
+
+            existing_http_function
+        }
+        None => entity::http_function::ActiveModel {
+            id: Set(Uuid::new_v4()),
+            name: Set(payload.name),
+            method: Set(payload.method),
+            path: Set(payload.path),
+            is_public: Set(payload.is_public),
+            scope_id: Set(scope.uuid),
+        },
+    }
+    .save(transaction.deref())
+    .await
+    .expect("Failed to save http function")
+    .try_into_model()
+    .expect("Failed to convert to model")
+    .into();
 
     store_wasm_file(payload.wasm_bytes, &http_function.related_wasm()).await;
+
+    // If there was a previous http function, invalidate the cache
+    if let Some(previous_http_function) = previous_http_function {
+        wasm_cache_service::invalidate_http_func(
+            cache_registry,
+            &scope.name,
+            previous_http_function.path.trim_start_matches('/'),
+            &previous_http_function.method,
+        )
+        .await;
+    }
 
     transaction.commit().await;
     http_function

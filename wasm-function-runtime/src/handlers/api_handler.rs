@@ -78,7 +78,7 @@ async fn deploy_function_with_manifest(
                         wasm_bytes,
                     };
 
-                    function_service::create_http_func(&state.db, payload).await;
+                    function_service::create_http_func(&state.db, &state.registry, payload).await;
                 } else {
                     return Err("HTTP function must have HTTP section in manifest".into_response());
                 }
