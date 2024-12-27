@@ -14,6 +14,15 @@ pub(crate) mod startup;
 pub(crate) mod bindings_function_http {
     wasmtime::component::bindgen!({
         world: "function-http",
+         path: "./wit-http/",
+        async: true,
+    });
+}
+
+pub(crate) mod bindings_function_scheduled {
+    wasmtime::component::bindgen!({
+        world: "function-scheduled",
+        path: "./wit-scheduled/",
         async: true
     });
 }
