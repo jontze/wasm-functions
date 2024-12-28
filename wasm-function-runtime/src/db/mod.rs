@@ -3,17 +3,41 @@ use sea_orm::TransactionTrait;
 
 pub(crate) struct DbPool(sea_orm::DatabaseConnection);
 
-impl DbPool {
-    pub(crate) async fn start_transaction(&self) -> DbTransaction {
-        DbTransaction(self.0.begin().await.expect("Failed to start transaction"))
+#[async_trait::async_trait]
+impl sea_orm::ConnectionTrait for DbPool {
+    fn get_database_backend(&self) -> sea_orm::DbBackend {
+        self.0.get_database_backend()
+    }
+
+    async fn execute(
+        &self,
+        stmt: sea_orm::Statement,
+    ) -> Result<sea_orm::ExecResult, sea_orm::DbErr> {
+        self.0.execute(stmt).await
+    }
+
+    async fn execute_unprepared(&self, sql: &str) -> Result<sea_orm::ExecResult, sea_orm::DbErr> {
+        self.0.execute_unprepared(sql).await
+    }
+
+    async fn query_one(
+        &self,
+        stmt: sea_orm::Statement,
+    ) -> Result<Option<sea_orm::QueryResult>, sea_orm::DbErr> {
+        self.0.query_one(stmt).await
+    }
+
+    async fn query_all(
+        &self,
+        stmt: sea_orm::Statement,
+    ) -> Result<Vec<sea_orm::QueryResult>, sea_orm::DbErr> {
+        self.0.query_all(stmt).await
     }
 }
 
-impl std::ops::Deref for DbPool {
-    type Target = sea_orm::DatabaseConnection;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
+impl DbPool {
+    pub(crate) async fn start_transaction(&self) -> DbTransaction {
+        DbTransaction(self.0.begin().await.expect("Failed to start transaction"))
     }
 }
 

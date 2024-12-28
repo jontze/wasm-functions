@@ -3,7 +3,7 @@ use tracing::info;
 
 use crate::{
     config::Loader,
-    db,
+    db, scheduler,
     server_state::{RuntimeState, RuntimeStateRef},
 };
 
@@ -14,10 +14,16 @@ pub(crate) async fn run_server() {
     .await;
     db::run_migrations(&db_pool).await;
 
+    let func_scheduler = scheduler::FunctionSchedulerImpl::new().await;
+    scheduler::run_scheduler(&func_scheduler, &db_pool).await;
+
     let app_config = crate::config::AppConfig::load();
 
-    let runtime_state: RuntimeStateRef =
-        std::sync::Arc::new(RuntimeState::new(db_pool, app_config));
+    let runtime_state: RuntimeStateRef = std::sync::Arc::new(RuntimeState::new(
+        db_pool,
+        app_config,
+        Box::new(func_scheduler),
+    ));
 
     let app = crate::routes::create_routes(runtime_state.clone())
         .with_state(runtime_state)

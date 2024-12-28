@@ -10,16 +10,22 @@ pub(crate) struct RuntimeState {
     pub engine: wasmtime::Engine,
     pub db: crate::db::DbPool,
     pub app_config: crate::config::AppConfig,
+    pub scheduler_manager: Box<dyn crate::scheduler::FunctionSchedulerManagerTrait>,
 }
 
 impl RuntimeState {
-    pub(crate) fn new(db: crate::db::DbPool, app_config: crate::config::AppConfig) -> Self {
+    pub(crate) fn new(
+        db: crate::db::DbPool,
+        app_config: crate::config::AppConfig,
+        scheduler_manager: Box<dyn crate::scheduler::FunctionSchedulerManagerTrait>,
+    ) -> Self {
         let mut config = wasmtime::Config::new();
         config.wasm_backtrace_details(wasmtime::WasmBacktraceDetails::Enable);
         config.wasm_component_model(true);
         config.async_support(true);
 
         let engine = wasmtime::Engine::new(&config).expect("Failed to create engine");
+
         let registry = moka::future::Cache::builder()
             .time_to_idle(
                 std::time::Duration::from_secs(60 * 60 * 24), /* 24 hours after last access */
@@ -37,6 +43,7 @@ impl RuntimeState {
             engine,
             db,
             app_config,
+            scheduler_manager,
         }
     }
 }

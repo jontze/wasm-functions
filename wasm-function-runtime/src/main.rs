@@ -7,6 +7,7 @@ pub(crate) mod domain;
 pub(crate) mod handlers;
 pub(crate) mod middlewares;
 mod routes;
+pub(crate) mod scheduler;
 pub(crate) mod server_state;
 pub(crate) mod services;
 pub(crate) mod startup;

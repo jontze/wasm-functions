@@ -92,7 +92,12 @@ async fn deploy_function_with_manifest(
                         wasm_bytes,
                     };
 
-                    function_service::create_scheduled_func(&state.db, payload).await;
+                    function_service::create_scheduled_func(
+                        &state.db,
+                        &*state.scheduler_manager,
+                        payload,
+                    )
+                    .await;
                 } else {
                     return Err("Scheduled function must have scheduled section".into_response());
                 }

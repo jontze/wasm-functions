@@ -44,3 +44,5 @@ reqwest = { version = "0.12.9", default-features = false, features = [
     "json",
 ] }
 strum = { version = "0.26.3", features = ["derive"] }
+tokio-cron-scheduler = { version = "0.13.0", features = ["tracing-subscriber"] }
+async-trait = "0.1.83"
