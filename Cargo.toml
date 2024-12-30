@@ -28,3 +28,9 @@ codegen-units = 1
 opt-level = "s"
 debug = false
 strip = true
+
+[profile.release.package.wasm-function-scheduled]
+codegen-units = 1
+opt-level = "s"
+debug = false
+strip = true

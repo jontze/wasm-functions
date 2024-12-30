@@ -4,17 +4,17 @@ use wasmtime::{
 };
 use wasmtime_wasi::{ResourceTable, WasiCtxBuilder};
 
-use crate::bindings_function_http::{self, FunctionHttp};
+use crate::bindings_function_scheduled;
 
 use super::ComponentState;
 
-pub(crate) struct FunctionHttpBuilder {
+pub(crate) struct FunctionScheduledBuilder {
     pub store: Store<ComponentState>,
     component: Component,
     linker: Linker<ComponentState>,
 }
 
-impl FunctionHttpBuilder {
+impl FunctionScheduledBuilder {
     pub fn from_binary(engine: &Engine, bytes: &[u8]) -> Self {
         let res_table = ResourceTable::new();
         let wasi_ctx = WasiCtxBuilder::new().inherit_env().build();
@@ -71,8 +71,8 @@ impl FunctionHttpBuilder {
         }
     }
 
-    pub async fn build(&mut self) -> FunctionHttp {
-        bindings_function_http::FunctionHttp::instantiate_async(
+    pub async fn build(&mut self) -> bindings_function_scheduled::FunctionScheduled {
+        bindings_function_scheduled::FunctionScheduled::instantiate_async(
             &mut self.store,
             &self.component,
             &self.linker,

@@ -2,6 +2,7 @@ use tower_http::ServiceBuilderExt;
 use tracing::info;
 
 use crate::{
+    component,
     config::Loader,
     db, scheduler,
     server_state::{RuntimeState, RuntimeStateRef},
@@ -14,13 +15,17 @@ pub(crate) async fn run_server() {
     .await;
     db::run_migrations(&db_pool).await;
 
-    let func_scheduler = scheduler::FunctionSchedulerImpl::new().await;
+    let wasm_engine = component::setup_engine();
+
+    let func_scheduler =
+        scheduler::FunctionSchedulerImpl::new(db_pool.clone(), wasm_engine.clone()).await;
     scheduler::run_scheduler(&func_scheduler, &db_pool).await;
 
     let app_config = crate::config::AppConfig::load();
 
     let runtime_state: RuntimeStateRef = std::sync::Arc::new(RuntimeState::new(
         db_pool,
+        wasm_engine,
         app_config,
         Box::new(func_scheduler),
     ));

@@ -1,4 +1,4 @@
-use sea_orm::{prelude::*, IntoActiveModel, Set, TryIntoModel};
+use sea_orm::{prelude::*, IntoActiveModel, Set};
 use std::ops::Deref;
 
 use crate::{
@@ -55,6 +55,29 @@ pub(crate) async fn find_http_func(
     }
 }
 
+pub(crate) async fn find_scheduled_func(
+    db_pool: &DbPool,
+    function_id: &uuid::Uuid,
+) -> Option<(domain::function::ScheduledFunction, Vec<u8>)> {
+    let func: Option<domain::function::ScheduledFunction> =
+        entity::scheduled_function::Entity::find()
+            .filter(entity::scheduled_function::Column::Id.eq(*function_id))
+            .one(db_pool)
+            .await
+            .expect("Failed to find scheduled function")
+            .map(|model| model.into());
+
+    if let Some(func) = func {
+        let file_name = func.related_wasm();
+        Some((
+            func,
+            wasm_file_service::extract_file_bytes(&file_name).await,
+        ))
+    } else {
+        None
+    }
+}
+
 pub(crate) async fn create_http_func(
     db_pool: &DbPool,
     cache_registry: &crate::server_state::PluginRegistry,
@@ -84,6 +107,9 @@ pub(crate) async fn create_http_func(
             existing_http_function.is_public = Set(payload.is_public);
 
             existing_http_function
+                .update(transaction.deref())
+                .await
+                .expect("Failed to update http func")
         }
         None => entity::http_function::ActiveModel {
             id: Set(Uuid::new_v4()),
@@ -92,13 +118,11 @@ pub(crate) async fn create_http_func(
             path: Set(payload.path),
             is_public: Set(payload.is_public),
             scope_id: Set(scope.uuid),
-        },
+        }
+        .insert(transaction.deref())
+        .await
+        .expect("Failed to insert http func"),
     }
-    .save(transaction.deref())
-    .await
-    .expect("Failed to save http function")
-    .try_into_model()
-    .expect("Failed to convert to model")
     .into();
 
     wasm_file_service::store_file(payload.wasm_bytes, &http_function.related_wasm()).await;
@@ -146,6 +170,9 @@ pub(crate) async fn create_scheduled_func(
                 existing_scheduled_func.cron = Set(payload.cron);
 
                 existing_scheduled_func
+                    .update(transaction.deref())
+                    .await
+                    .expect("Failed to update scheduled func")
             }
             None => {
                 // No existing scheduled func, so we need to create one
@@ -155,13 +182,11 @@ pub(crate) async fn create_scheduled_func(
                     cron: Set(payload.cron),
                     scope_id: Set(scope.uuid),
                 }
+                .insert(transaction.deref())
+                .await
+                .expect("Failed to insert scheduled func")
             }
         }
-        .save(db_pool)
-        .await
-        .expect("Failed to save scheduled func")
-        .try_into_model()
-        .expect("Failed to convert to model")
         .into();
 
     wasm_file_service::store_file(payload.wasm_bytes, &scheduled_function.related_wasm()).await;

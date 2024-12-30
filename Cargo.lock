@@ -4767,6 +4767,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "wasm-function-scheduled"
+version = "0.1.0"
+dependencies = [
+ "wit-bindgen-rt 0.36.0",
+]
+
+[[package]]
 name = "wasm-metadata"
 version = "0.219.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

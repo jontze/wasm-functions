@@ -1,0 +1,8 @@
+[function]
+name = "scheduled"
+scope = "example"
+trigger = "scheduled"
+
+[scheduled]
+# Every minute
+cron = "0 * * * * *"

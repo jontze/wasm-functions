@@ -1,8 +1,10 @@
 use function_scheduler::FunctionSchedulerExecutorTrait;
 
 pub(crate) mod function_scheduler;
+pub(crate) mod state;
 
 pub(crate) use function_scheduler::{FunctionSchedulerImpl, FunctionSchedulerManagerTrait};
+use tracing::info;
 
 use crate::services::function_service;
 
@@ -12,9 +14,13 @@ where
 {
     let funcs = function_service::find_all_scheduled_func(db_pool).await;
 
+    let count = funcs.len();
+
     for func in funcs {
         scheduler.add(&func.uuid, &func.cron).await;
     }
 
     scheduler.run().await;
+
+    info!("{count} Background Jobs started");
 }

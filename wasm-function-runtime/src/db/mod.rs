@@ -1,6 +1,7 @@
 use migration::MigratorTrait;
 use sea_orm::TransactionTrait;
 
+#[derive(Clone)]
 pub(crate) struct DbPool(sea_orm::DatabaseConnection);
 
 #[async_trait::async_trait]
