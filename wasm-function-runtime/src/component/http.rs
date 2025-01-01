@@ -17,7 +17,7 @@ pub(crate) struct FunctionHttpBuilder {
 impl FunctionHttpBuilder {
     pub fn from_binary(engine: &Engine, bytes: &[u8]) -> Self {
         let res_table = ResourceTable::new();
-        let wasi_ctx = WasiCtxBuilder::new().inherit_env().build();
+        let wasi_ctx = WasiCtxBuilder::new().build();
         let wasi_http_ctx = wasmtime_wasi_http::WasiHttpCtx::new();
 
         let component = Component::from_binary(engine, bytes).expect("Failed to create component");
@@ -47,7 +47,7 @@ impl FunctionHttpBuilder {
 
     pub unsafe fn deserialize(engine: &Engine, bytes: &[u8]) -> Self {
         let res_table = ResourceTable::new();
-        let wasi_ctx = WasiCtxBuilder::new().inherit_env().build();
+        let wasi_ctx = WasiCtxBuilder::new().build();
         let wasi_http_ctx = wasmtime_wasi_http::WasiHttpCtx::new();
 
         let component =
