@@ -10,6 +10,11 @@ pub(crate) async fn extract_http_func(
 }
 
 fn cache_key(scope_name: &str, path: &str, method: &str) -> String {
+    let path = if path.starts_with('/') {
+        path.to_string()
+    } else {
+        format!("/{}", path)
+    };
     format!("{scope_name}-{path}-{method}")
 }
 
