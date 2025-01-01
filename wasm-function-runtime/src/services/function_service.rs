@@ -55,6 +55,40 @@ pub(crate) async fn find_http_func(
     }
 }
 
+pub(crate) async fn delete_http_func(
+    db_pool: &DbPool,
+    cache: &crate::server_state::PluginRegistry,
+    function_id: &uuid::Uuid,
+) {
+    let http_function = entity::http_function::Entity::find()
+        .filter(entity::http_function::Column::Id.eq(*function_id))
+        .find_also_related(entity::scope::Entity)
+        .one(db_pool)
+        .await
+        .expect("Failed to find http function");
+
+    if let Some((http_function, scope)) = http_function {
+        http_function
+            .clone()
+            .delete(db_pool)
+            .await
+            .expect("Failed to delete http function");
+
+        let http_function: domain::function::HttpFunction = http_function.into();
+        wasm_file_service::delete_file(&http_function.related_wasm()).await;
+
+        if let Some(scope) = scope {
+            wasm_cache_service::invalidate_http_func(
+                cache,
+                &scope.name,
+                &http_function.path,
+                &http_function.method,
+            )
+            .await;
+        }
+    }
+}
+
 pub(crate) async fn find_scheduled_func(
     db_pool: &DbPool,
     function_id: &uuid::Uuid,
@@ -75,6 +109,31 @@ pub(crate) async fn find_scheduled_func(
         ))
     } else {
         None
+    }
+}
+
+pub(crate) async fn delete_scheduled_func(
+    db_pool: &DbPool,
+    cache: &dyn crate::scheduler::FunctionSchedulerManagerTrait,
+    function_id: &uuid::Uuid,
+) {
+    let scheduled_function = entity::scheduled_function::Entity::find()
+        .filter(entity::scheduled_function::Column::Id.eq(*function_id))
+        .one(db_pool)
+        .await
+        .expect("Failed to find scheduled function");
+
+    if let Some(scheduled_function) = scheduled_function {
+        scheduled_function
+            .clone()
+            .delete(db_pool)
+            .await
+            .expect("Failed to delete scheduled function");
+
+        let scheduled_function: domain::function::ScheduledFunction = scheduled_function.into();
+        wasm_file_service::delete_file(&scheduled_function.related_wasm()).await;
+
+        cache.remove(&scheduled_function.uuid).await;
     }
 }
 

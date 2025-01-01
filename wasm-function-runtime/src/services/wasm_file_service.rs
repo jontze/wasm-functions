@@ -30,3 +30,8 @@ pub(crate) async fn extract_file_bytes(file_name: &str) -> Vec<u8> {
     file.read_to_end(&mut bytes).await.unwrap();
     bytes
 }
+
+pub(crate) async fn delete_file(file_name: &str) {
+    let file_path = Path::new(WASM_FUNCTIONS_DIR).join(file_name);
+    tokio::fs::remove_file(file_path).await.unwrap();
+}

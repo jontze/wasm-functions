@@ -1,4 +1,10 @@
-use axum::{extract::State, response::IntoResponse, routing::post};
+use axum::{
+    extract::{Path, State},
+    response::IntoResponse,
+    routing::{delete, post},
+};
+use serde::Deserialize;
+use uuid::Uuid;
 
 use crate::{domain, server_state::RuntimeStateRef, services::function_service};
 
@@ -7,6 +13,14 @@ pub(crate) fn router(
 ) -> axum::routing::Router<RuntimeStateRef> {
     axum::Router::new()
         .route("/deploy", post(deploy_function_with_manifest))
+        .route(
+            "/:scope/function/http/:function_id",
+            delete(delete_http_function),
+        )
+        .route(
+            "/:scope/function/scheduled/:function_id",
+            delete(delete_scheduled_function),
+        )
         .route_layer(axum::middleware::from_fn_with_state(
             app_state,
             crate::middlewares::auth::auth,
@@ -33,7 +47,7 @@ pub(crate) struct CreateScheduledFunctionPayload {
 }
 
 async fn deploy_function_with_manifest(
-    State(state): axum::extract::State<RuntimeStateRef>,
+    State(state): State<RuntimeStateRef>,
     mut multipart: axum::extract::Multipart,
 ) -> impl IntoResponse {
     let mut manifest: Option<domain::manifest::Manifest> = None;
@@ -108,4 +122,34 @@ async fn deploy_function_with_manifest(
     }
 
     Ok("OK".into_response())
+}
+
+#[derive(Deserialize)]
+struct FunctionPath {
+    #[allow(unused)]
+    scope: String,
+    function_id: Uuid,
+}
+
+async fn delete_http_function(
+    State(state): State<RuntimeStateRef>,
+    Path(path): Path<FunctionPath>,
+) -> impl IntoResponse {
+    function_service::delete_http_func(&state.db, &state.registry, &path.function_id).await;
+
+    "OK".into_response()
+}
+
+async fn delete_scheduled_function(
+    State(state): State<RuntimeStateRef>,
+    Path(path): Path<FunctionPath>,
+) -> impl IntoResponse {
+    function_service::delete_scheduled_func(
+        &state.db,
+        &*state.scheduler_manager,
+        &path.function_id,
+    )
+    .await;
+
+    "OK".into_response()
 }
