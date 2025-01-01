@@ -29,5 +29,6 @@ RUN cargo build --release --bin wasm-function-runtime --target x86_64-unknown-li
 
 FROM gcr.io/distroless/static@sha256:5c7e2b465ac6a2a4e5f4f7f722ce43b147dabe87cb21ac6c4007ae5178a1fa58 AS runtime
 WORKDIR /runtime
-COPY --from=builder /runtime/target/x86_64-unknown-linux-musl/release/wasm-function-runtime wasm-function-runtime
+COPY --from=builder --chown=nonroot:nonroot /runtime/target/x86_64-unknown-linux-musl/release/wasm-function-runtime wasm-function-runtime
+USER nonroot
 CMD [ "./wasm-function-runtime" ]
