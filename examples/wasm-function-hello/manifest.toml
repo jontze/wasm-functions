@@ -1,0 +1,9 @@
+[function]
+name = "envs"
+scope = "example"
+trigger = "http"
+
+[http]
+path = "/envs"
+method = "GET"
+public = true
