@@ -84,6 +84,15 @@ struct ListFunctionCommand {
 enum ScopeCommand {
     /// List all scopes
     List,
+    /// Delete a scope by name
+    Delete(DeleteScopeCommand),
+}
+
+#[derive(Parser)]
+struct DeleteScopeCommand {
+    /// Name of the scope to delete
+    #[clap(short, long)]
+    name: String,
 }
 
 impl<TCredStore: CredentialStoreTrait> command_executor::CommandExecutorTrait<TCredStore>
@@ -149,6 +158,9 @@ impl<TCredStore: CredentialStoreTrait> command_executor::CommandExecutorTrait<TC
 
         match self {
             ScopeCommand::List => scope::list::execute(&active_token, function_runtime_url),
+            ScopeCommand::Delete(delete_command) => {
+                scope::delete::execute(&active_token, function_runtime_url, &delete_command.name)
+            }
         }
     }
 }

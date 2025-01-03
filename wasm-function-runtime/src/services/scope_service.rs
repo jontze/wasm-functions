@@ -57,3 +57,15 @@ pub(crate) async fn create_or_find_scope(
     }
     .into()
 }
+
+pub(crate) async fn delete_scope(db_pool: &crate::db::DbPool, scope_name: &str) {
+    let scope_to_delete = entity::scope::Entity::find()
+        .filter(entity::scope::Column::Name.eq(scope_name))
+        .one(db_pool)
+        .await
+        .expect("Failed to query scope by name");
+
+    if let Some(scope) = scope_to_delete {
+        scope.delete(db_pool).await.expect("Failed to delete scope");
+    }
+}

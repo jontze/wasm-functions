@@ -19,6 +19,7 @@ pub(crate) fn router(
     axum::Router::new()
         .route("/deploy", post(deploy_function_with_manifest))
         .route("/scope", get(list_scopes))
+        .route("/scope/:scope", delete(delete_scope))
         .route("/scope/:scope/function", get(list_scope_functions))
         .route(
             "/scope/:scope/function/http/:function_id",
@@ -129,6 +130,15 @@ async fn deploy_function_with_manifest(
     }
 
     Ok("OK".into_response())
+}
+
+async fn delete_scope(
+    State(state): State<RuntimeStateRef>,
+    Path(scope_name): Path<String>,
+) -> impl IntoResponse {
+    scope_service::delete_scope(&state.db, &scope_name).await;
+
+    "OK".into_response()
 }
 
 #[derive(Serialize)]

@@ -1,5 +1,6 @@
 /target
 .env
+.env.ps1
 *.sqlite
 *.sqlite3
 local_test/
