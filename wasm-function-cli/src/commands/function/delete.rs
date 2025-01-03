@@ -16,7 +16,7 @@ pub(crate) fn execute(
 
     client
         .delete(format!(
-            "{runtime_url}/api/{scope_name}/function/{func_kind}/{function_id}"
+            "{runtime_url}/api/scope/{scope_name}/function/{func_kind}/{function_id}"
         ))
         .bearer_auth(token.to_owned())
         .send()

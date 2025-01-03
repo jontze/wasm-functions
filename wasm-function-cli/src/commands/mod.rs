@@ -7,6 +7,7 @@ mod deploy;
 mod function;
 mod login;
 mod logout;
+mod scope;
 
 pub(crate) use command_context::CommandContext;
 
@@ -29,7 +30,10 @@ enum Command {
     Deploy(DeployCommand),
     /// Commands to manage functions
     #[clap(subcommand)]
-    Functions(FunctionCommand),
+    Function(FunctionCommand),
+    /// Commands to manage scopes
+    #[clap(subcommand)]
+    Scope(ScopeCommand),
 }
 
 #[derive(Parser)]
@@ -46,6 +50,8 @@ struct DeployCommand {
 enum FunctionCommand {
     /// Delete a function by name
     Delete(DeleteFunctionCommand),
+    /// List all functions of a scope
+    List(ListFunctionCommand),
 }
 
 #[derive(Parser)]
@@ -65,6 +71,19 @@ struct DeleteFunctionCommand {
 enum FunctionKind {
     Http,
     Scheduled,
+}
+
+#[derive(Parser)]
+struct ListFunctionCommand {
+    /// Name of the scope the functions belong to
+    #[clap(short, long)]
+    scope_name: String,
+}
+
+#[derive(Subcommand)]
+enum ScopeCommand {
+    /// List all scopes
+    List,
 }
 
 impl<TCredStore: CredentialStoreTrait> command_executor::CommandExecutorTrait<TCredStore>
@@ -91,7 +110,8 @@ impl<TCredStore: CredentialStoreTrait> command_executor::CommandExecutorTrait<TC
             Command::Login => login::execute(ctx),
             Command::Logout => logout::execute(ctx),
             Command::Deploy(deploy_command) => deploy_command.execute(ctx),
-            Command::Functions(function_command) => function_command.execute(ctx),
+            Command::Function(function_command) => function_command.execute(ctx),
+            Command::Scope(scope_command) => scope_command.execute(ctx),
         }
     }
 }
@@ -111,6 +131,24 @@ impl<TCredStore: CredentialStoreTrait> command_executor::CommandExecutorTrait<TC
                 &delete_command.id,
                 &delete_command.kind,
             ),
+            FunctionCommand::List(list_command) => function::list::execute(
+                &active_token,
+                function_runtime_url,
+                &list_command.scope_name,
+            ),
+        }
+    }
+}
+
+impl<TCredStore: CredentialStoreTrait> command_executor::CommandExecutorTrait<TCredStore>
+    for ScopeCommand
+{
+    fn execute(&self, ctx: &mut command_context::CommandContext<TCredStore>) -> miette::Result<()> {
+        let active_token = crate::auth::token_refresh::get_active_token(ctx)?;
+        let function_runtime_url = &ctx.config.function_runtime_url;
+
+        match self {
+            ScopeCommand::List => scope::list::execute(&active_token, function_runtime_url),
         }
     }
 }

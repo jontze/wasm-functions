@@ -1,22 +1,44 @@
+use serde::Serialize;
 use uuid::Uuid;
 
-#[allow(unused)]
+#[derive(Serialize)]
 pub(crate) enum Function {
     Http(HttpFunction),
     Scheduled(ScheduledFunction),
+}
+
+impl Function {
+    pub(crate) fn name(&self) -> &str {
+        match self {
+            Function::Http(http_function) => http_function.name.as_str(),
+            Function::Scheduled(scheduled_function) => scheduled_function.name.as_str(),
+        }
+    }
+
+    pub(crate) fn uuid(&self) -> Uuid {
+        match self {
+            Function::Http(http_function) => http_function.uuid,
+            Function::Scheduled(scheduled_function) => scheduled_function.uuid,
+        }
+    }
+
+    pub(crate) fn kind(&self) -> &str {
+        match self {
+            Function::Http(_) => "http",
+            Function::Scheduled(_) => "scheduled",
+        }
+    }
 }
 
 pub(crate) trait WasmFunctionTrait {
     fn related_wasm(&self) -> String;
 }
 
+#[derive(Serialize)]
 pub(crate) struct HttpFunction {
     pub(crate) uuid: Uuid,
-    #[allow(unused)]
     pub(crate) name: String,
-    #[allow(unused)]
     pub(crate) path: String,
-    #[allow(unused)]
     pub(crate) method: String,
 }
 
@@ -37,11 +59,10 @@ impl From<entity::http_function::Model> for HttpFunction {
     }
 }
 
+#[derive(Serialize)]
 pub(crate) struct ScheduledFunction {
-    #[allow(unused)]
     pub(crate) name: String,
     pub(crate) uuid: Uuid,
-    #[allow(unused)]
     pub(crate) cron: String,
 }
 

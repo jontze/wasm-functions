@@ -5,8 +5,56 @@ use crate::{
     db::DbPool,
     domain::{self, function::WasmFunctionTrait},
     handlers::api_handler::{CreateHttpFunctionPayload, CreateScheduledFunctionPayload},
-    services::{wasm_cache_service, wasm_file_service},
+    services::{scope_service, wasm_cache_service, wasm_file_service},
 };
+
+pub(crate) async fn find_all_funcs(
+    db_pool: &DbPool,
+    scope_name: &str,
+) -> Vec<domain::function::Function> {
+    if let Some(scope) = scope_service::get_scope_by_name(db_pool, scope_name).await {
+        // Extract http functions
+        let http_fuctions: Vec<domain::function::HttpFunction> =
+            entity::http_function::Entity::find()
+                .filter(entity::http_function::Column::ScopeId.eq(scope.uuid))
+                .all(db_pool)
+                .await
+                .expect("Failed to extract http functions")
+                .into_iter()
+                .map(|model| model.into())
+                .collect();
+
+        // Extract scheduled functions
+        let scheduled_functions: Vec<domain::function::ScheduledFunction> =
+            entity::scheduled_function::Entity::find()
+                .filter(entity::scheduled_function::Column::ScopeId.eq(scope.uuid))
+                .all(db_pool)
+                .await
+                .expect("Failed to extract scheduled functions")
+                .into_iter()
+                .map(|model| model.into())
+                .collect();
+
+        // Merge the functions into a single vector
+        let mut functions: Vec<domain::function::Function> = http_fuctions
+            .into_iter()
+            .map(domain::function::Function::Http)
+            .collect();
+        functions.extend(
+            scheduled_functions
+                .into_iter()
+                .map(domain::function::Function::Scheduled),
+        );
+
+        // Sort functions by name
+        functions.sort_by(|a, b| a.name().cmp(b.name()));
+
+        // Return the merged and sorted functions
+        functions
+    } else {
+        vec![]
+    }
+}
 
 pub(crate) async fn find_all_scheduled_func(
     db_pool: &DbPool,
