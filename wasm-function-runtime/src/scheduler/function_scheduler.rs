@@ -19,11 +19,17 @@ pub(crate) struct FunctionSchedulerImpl {
 }
 
 impl FunctionSchedulerImpl {
-    pub(crate) async fn new(db_pool: crate::db::DbPool, wasm_engine: wasmtime::Engine) -> Self {
+    pub(crate) async fn new(
+        db_pool: crate::db::DbPool,
+        wasm_engine: wasmtime::Engine,
+        storage_backend: std::sync::Arc<dyn crate::storage::StorageBackend>,
+    ) -> Self {
         let inner_scheduler = tokio_cron_scheduler::JobScheduler::new()
             .await
             .expect("Failed to create scheduler");
-        let state = crate::scheduler::state::SchedulerState::new(db_pool, wasm_engine).await;
+        let state =
+            crate::scheduler::state::SchedulerState::new(db_pool, wasm_engine, storage_backend)
+                .await;
         Self {
             inner_scheduler,
             state,
@@ -39,12 +45,14 @@ impl FunctionSchedulerManagerTrait for FunctionSchedulerImpl {
         let engine = self.state.engine.clone();
         let function_id = *function_id;
         let binary_cache = self.state.binary_cache.clone();
+        let storage_backend = self.state.storage_backend.clone();
 
         let cron_job = tokio_cron_scheduler::Job::new_async(cron_syntax, move |job_uuid, _lock| {
             // Prepare variables to move into the async block
             let db_pool = db_pool.clone();
             let engine = engine.clone();
             let binary_cache = binary_cache.clone();
+            let storage_backend = storage_backend.clone();
 
             Box::pin(async move {
                 debug!("Execute scheduled function '{function_id}' ({job_uuid})",);
@@ -63,8 +71,12 @@ impl FunctionSchedulerManagerTrait for FunctionSchedulerImpl {
                     Some((func_builder.build().await, func_builder))
                 } else {
                     // Otherwise, fetch the function from the database
-                    if let Some((_, bytes)) =
-                        function_service::find_scheduled_func(&db_pool, &function_id).await
+                    if let Some((_, bytes)) = function_service::find_scheduled_func(
+                        &db_pool,
+                        &*storage_backend,
+                        &function_id,
+                    )
+                    .await
                     {
                         // Exract the function from the storage
                         let mut func_builder =

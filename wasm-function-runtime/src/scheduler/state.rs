@@ -7,21 +7,28 @@ pub(crate) struct SchedulerState {
     pub engine: wasmtime::Engine,
     pub cache: SchedulerCache,
     pub binary_cache: BinaryCache,
+    pub storage_backend: std::sync::Arc<dyn crate::storage::StorageBackend>,
 }
 
 impl SchedulerState {
-    pub(crate) async fn new(db_pool: crate::db::DbPool, engine: wasmtime::Engine) -> Self {
+    pub(crate) async fn new(
+        db_pool: crate::db::DbPool,
+        engine: wasmtime::Engine,
+        storage_backend: std::sync::Arc<dyn crate::storage::StorageBackend>,
+    ) -> Self {
         let cache = moka::future::Cache::builder().build();
         let binary_cache = moka::future::Cache::builder()
             .time_to_idle(std::time::Duration::from_secs(
                 60 * 10, /* 10 Minutes cache */
             ))
             .build();
+
         Self {
             db_pool,
             engine,
             cache,
             binary_cache,
+            storage_backend,
         }
     }
 }

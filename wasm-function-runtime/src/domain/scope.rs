@@ -4,7 +4,6 @@ use uuid::Uuid;
 #[derive(Serialize)]
 pub(crate) struct FunctionScope {
     pub(crate) uuid: Uuid,
-    #[allow(unused)]
     pub(crate) name: String,
 }
 

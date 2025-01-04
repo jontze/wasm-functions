@@ -5,7 +5,8 @@ use crate::{
     db::DbPool,
     domain::{self, function::WasmFunctionTrait},
     handlers::api_handler::{CreateHttpFunctionPayload, CreateScheduledFunctionPayload},
-    services::{scope_service, wasm_cache_service, wasm_file_service},
+    services::{scope_service, wasm_cache_service},
+    storage,
 };
 
 pub(crate) async fn find_all_funcs(
@@ -70,6 +71,7 @@ pub(crate) async fn find_all_scheduled_func(
 
 pub(crate) async fn find_http_func(
     db_pool: &DbPool,
+    storage_backend: &dyn storage::StorageBackend,
     scope_name: &str,
     function_path: &str,
     function_method: &str,
@@ -96,7 +98,10 @@ pub(crate) async fn find_http_func(
         let file_name = http_function.related_wasm();
         Some((
             http_function,
-            wasm_file_service::extract_file_bytes(&file_name).await,
+            storage_backend
+                .extract_file_bytes(&file_name)
+                .await
+                .expect("Failed to extract file"),
         ))
     } else {
         None
@@ -106,6 +111,7 @@ pub(crate) async fn find_http_func(
 pub(crate) async fn delete_http_func(
     db_pool: &DbPool,
     cache: &crate::server_state::PluginRegistry,
+    storage_backend: &dyn storage::StorageBackend,
     function_id: &uuid::Uuid,
 ) {
     let http_function = entity::http_function::Entity::find()
@@ -123,7 +129,10 @@ pub(crate) async fn delete_http_func(
             .expect("Failed to delete http function");
 
         let http_function: domain::function::HttpFunction = http_function.into();
-        wasm_file_service::delete_file(&http_function.related_wasm()).await;
+        storage_backend
+            .delete_file(&http_function.related_wasm())
+            .await
+            .expect("Failed to delete file");
 
         if let Some(scope) = scope {
             wasm_cache_service::invalidate_http_func(
@@ -139,6 +148,7 @@ pub(crate) async fn delete_http_func(
 
 pub(crate) async fn find_scheduled_func(
     db_pool: &DbPool,
+    storage_backend: &dyn storage::StorageBackend,
     function_id: &uuid::Uuid,
 ) -> Option<(domain::function::ScheduledFunction, Vec<u8>)> {
     let func: Option<domain::function::ScheduledFunction> =
@@ -153,7 +163,10 @@ pub(crate) async fn find_scheduled_func(
         let file_name = func.related_wasm();
         Some((
             func,
-            wasm_file_service::extract_file_bytes(&file_name).await,
+            storage_backend
+                .extract_file_bytes(&file_name)
+                .await
+                .expect("Failed to extract file"),
         ))
     } else {
         None
@@ -163,6 +176,7 @@ pub(crate) async fn find_scheduled_func(
 pub(crate) async fn delete_scheduled_func(
     db_pool: &DbPool,
     cache: &dyn crate::scheduler::FunctionSchedulerManagerTrait,
+    storage_backend: &dyn storage::StorageBackend,
     function_id: &uuid::Uuid,
 ) {
     let scheduled_function = entity::scheduled_function::Entity::find()
@@ -179,7 +193,10 @@ pub(crate) async fn delete_scheduled_func(
             .expect("Failed to delete scheduled function");
 
         let scheduled_function: domain::function::ScheduledFunction = scheduled_function.into();
-        wasm_file_service::delete_file(&scheduled_function.related_wasm()).await;
+        storage_backend
+            .delete_file(&scheduled_function.related_wasm())
+            .await
+            .expect("Failed to delete file");
 
         cache.remove(&scheduled_function.uuid).await;
     }
@@ -188,6 +205,7 @@ pub(crate) async fn delete_scheduled_func(
 pub(crate) async fn create_http_func(
     db_pool: &DbPool,
     cache_registry: &crate::server_state::PluginRegistry,
+    storage_backend: &dyn crate::storage::StorageBackend,
     payload: CreateHttpFunctionPayload,
 ) -> domain::function::HttpFunction {
     let transaction = db_pool.start_transaction().await;
@@ -232,7 +250,10 @@ pub(crate) async fn create_http_func(
     }
     .into();
 
-    wasm_file_service::store_file(payload.wasm_bytes, &http_function.related_wasm()).await;
+    storage_backend
+        .store_file(payload.wasm_bytes, &http_function.related_wasm())
+        .await
+        .expect("Failed to store file");
 
     // If there was a previous http function, invalidate the cache
     if let Some(previous_http_function) = previous_http_function {
@@ -252,6 +273,7 @@ pub(crate) async fn create_http_func(
 pub(crate) async fn create_scheduled_func(
     db_pool: &DbPool,
     func_scheduler: &dyn crate::scheduler::FunctionSchedulerManagerTrait,
+    storage_backend: &dyn crate::storage::StorageBackend,
     payload: CreateScheduledFunctionPayload,
 ) -> domain::function::ScheduledFunction {
     let transaction = db_pool.start_transaction().await;
@@ -296,7 +318,10 @@ pub(crate) async fn create_scheduled_func(
         }
         .into();
 
-    wasm_file_service::store_file(payload.wasm_bytes, &scheduled_function.related_wasm()).await;
+    storage_backend
+        .store_file(payload.wasm_bytes, &scheduled_function.related_wasm())
+        .await
+        .expect("Failed to store file");
 
     transaction.commit().await;
 

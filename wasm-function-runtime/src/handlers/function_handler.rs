@@ -128,8 +128,14 @@ async fn bootstrap_function(
     } else {
         // If it is not, check the db if there is a function for the route
         let (_, wasm_bytes) = if let Some((http_function, wasm_bytes)) =
-            function_service::find_http_func(&state.db, &path.scope, &path.function_path, method)
-                .await
+            function_service::find_http_func(
+                &state.db,
+                &*state.storage_backend,
+                &path.scope,
+                &path.function_path,
+                method,
+            )
+            .await
         {
             (http_function, wasm_bytes)
         } else {

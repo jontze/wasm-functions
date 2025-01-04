@@ -46,7 +46,6 @@ pub(crate) struct CreateHttpFunctionPayload {
 }
 
 #[derive(Default)]
-#[allow(unused)]
 pub(crate) struct CreateScheduledFunctionPayload {
     pub name: String,
     pub scope: String,
@@ -100,7 +99,13 @@ async fn deploy_function_with_manifest(
                         wasm_bytes,
                     };
 
-                    function_service::create_http_func(&state.db, &state.registry, payload).await;
+                    function_service::create_http_func(
+                        &state.db,
+                        &state.registry,
+                        &*state.storage_backend,
+                        payload,
+                    )
+                    .await;
                 } else {
                     return Err("HTTP function must have HTTP section in manifest".into_response());
                 }
@@ -117,6 +122,7 @@ async fn deploy_function_with_manifest(
                     function_service::create_scheduled_func(
                         &state.db,
                         &*state.scheduler_manager,
+                        &*state.storage_backend,
                         payload,
                     )
                     .await;
@@ -206,7 +212,13 @@ async fn delete_http_function(
     State(state): State<RuntimeStateRef>,
     Path(path): Path<FunctionPath>,
 ) -> impl IntoResponse {
-    function_service::delete_http_func(&state.db, &state.registry, &path.function_id).await;
+    function_service::delete_http_func(
+        &state.db,
+        &state.registry,
+        &*state.storage_backend,
+        &path.function_id,
+    )
+    .await;
 
     "OK".into_response()
 }
@@ -218,6 +230,7 @@ async fn delete_scheduled_function(
     function_service::delete_scheduled_func(
         &state.db,
         &*state.scheduler_manager,
+        &*state.storage_backend,
         &path.function_id,
     )
     .await;

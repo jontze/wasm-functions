@@ -11,6 +11,7 @@ pub(crate) struct RuntimeState {
     pub db: crate::db::DbPool,
     pub app_config: crate::config::AppConfig,
     pub scheduler_manager: Box<dyn crate::scheduler::FunctionSchedulerManagerTrait>,
+    pub storage_backend: std::sync::Arc<dyn crate::storage::StorageBackend>,
 }
 
 impl RuntimeState {
@@ -19,6 +20,7 @@ impl RuntimeState {
         wasm_engine: wasmtime::Engine,
         app_config: crate::config::AppConfig,
         scheduler_manager: Box<dyn crate::scheduler::FunctionSchedulerManagerTrait>,
+        storage_backend: std::sync::Arc<dyn crate::storage::StorageBackend>,
     ) -> Self {
         let registry = moka::future::Cache::builder()
             .time_to_idle(
@@ -38,6 +40,7 @@ impl RuntimeState {
             db,
             app_config,
             scheduler_manager,
+            storage_backend,
         }
     }
 }
