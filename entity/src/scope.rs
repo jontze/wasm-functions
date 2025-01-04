@@ -17,6 +17,10 @@ pub enum Relation {
     HttpFunction,
     #[sea_orm(has_many = "super::scheduled_function::Entity")]
     ScheduledFunction,
+    #[sea_orm(has_many = "super::secret::Entity")]
+    Secret,
+    #[sea_orm(has_many = "super::variable::Entity")]
+    Variable,
 }
 
 impl Related<super::http_function::Entity> for Entity {
@@ -28,6 +32,18 @@ impl Related<super::http_function::Entity> for Entity {
 impl Related<super::scheduled_function::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::ScheduledFunction.def()
+    }
+}
+
+impl Related<super::secret::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Secret.def()
+    }
+}
+
+impl Related<super::variable::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Variable.def()
     }
 }
 

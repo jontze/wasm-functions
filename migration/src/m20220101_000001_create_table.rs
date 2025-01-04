@@ -21,6 +21,52 @@ impl MigrationTrait for Migration {
             .await?;
 
         // ***************************
+        // **** Start Variables ******
+        // ***************************
+        let mut variable_scope_id_fk = ForeignKey::create()
+            .from(Variable::Table, Variable::ScopeId)
+            .to(Scope::Table, Scope::Id)
+            .on_delete(ForeignKeyAction::Cascade)
+            .to_owned();
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(Variable::Table)
+                    .if_not_exists()
+                    .col(pk_uuid(Variable::Id).not_null().unique_key())
+                    .col(uuid(Variable::ScopeId).not_null())
+                    .col(string(Variable::Name).not_null())
+                    .col(string(Variable::Value).not_null())
+                    .foreign_key(&mut variable_scope_id_fk)
+                    .to_owned(),
+            )
+            .await?;
+
+        // ***************************
+        // **** Start Secrets ********
+        // ***************************
+        let mut secret_scope_id_fk = ForeignKey::create()
+            .from(Secret::Table, Secret::ScopeId)
+            .to(Scope::Table, Scope::Id)
+            .on_delete(ForeignKeyAction::Cascade)
+            .to_owned();
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(Secret::Table)
+                    .if_not_exists()
+                    .col(pk_uuid(Secret::Id).not_null().unique_key())
+                    .col(uuid(Secret::ScopeId).not_null())
+                    .col(string(Secret::Name).not_null())
+                    .col(string(Secret::Value).not_null())
+                    .foreign_key(&mut secret_scope_id_fk)
+                    .to_owned(),
+            )
+            .await?;
+
+        // ***************************
         // **** Start HTTP Func Table
         // ***************************
         let mut http_func_scope_id_fk = ForeignKey::create()
@@ -98,6 +144,14 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
+            .drop_table(Table::drop().if_exists().table(Variable::Table).to_owned())
+            .await?;
+
+        manager
+            .drop_table(Table::drop().if_exists().table(Secret::Table).to_owned())
+            .await?;
+
+        manager
             .drop_table(
                 Table::drop()
                     .if_exists()
@@ -169,3 +223,21 @@ enum Scope {
 }
 
 const IDX_UNIQUE_SCOPE_SCHEDULED_FUNC_NAME: &str = "idx_unique_scope_scheduled_func_name";
+
+#[derive(DeriveIden)]
+enum Variable {
+    Table,
+    Id,
+    ScopeId,
+    Name,
+    Value,
+}
+
+#[derive(DeriveIden)]
+enum Secret {
+    Table,
+    Id,
+    ScopeId,
+    Name,
+    Value,
+}

@@ -5,3 +5,5 @@ pub mod prelude;
 pub mod http_function;
 pub mod scheduled_function;
 pub mod scope;
+pub mod secret;
+pub mod variable;
