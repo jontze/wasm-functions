@@ -1,16 +1,17 @@
 use axum::{
     extract::{Path, State},
     response::IntoResponse,
-    routing::{delete, get, post},
+    routing::{delete, get, post, put},
     Json,
 };
+use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
     domain,
     server_state::RuntimeStateRef,
-    services::{function_service, scope_service},
+    services::{function_service, scope_service, variable_service},
 };
 
 pub(crate) fn router(
@@ -20,6 +21,20 @@ pub(crate) fn router(
         .route("/deploy", post(deploy_function_with_manifest))
         .route("/scope", get(list_scopes))
         .route("/scope/:scope", delete(delete_scope))
+        .route("/scope/:scope/variable", get(list_scope_variables))
+        .route("/scope/:scope/variable", post(create_scope_variable))
+        .route(
+            "/scope/:scope/variable/:variable_id",
+            get(get_scope_variable),
+        )
+        .route(
+            "/scope/:scope/variable/:variable_id",
+            put(update_scope_variable),
+        )
+        .route(
+            "/scope/:scope/variable/:variable_id",
+            delete(delete_scope_variable),
+        )
         .route("/scope/:scope/function", get(list_scope_functions))
         .route(
             "/scope/:scope/function/http/:function_id",
@@ -161,6 +176,149 @@ impl From<Vec<domain::scope::FunctionScope>> for ScopeListResponse {
 async fn list_scopes(State(state): State<RuntimeStateRef>) -> impl IntoResponse {
     let scopes: ScopeListResponse = scope_service::get_all_scopes(&state.db).await.into();
     Json(scopes).into_response()
+}
+
+#[derive(Serialize, Deserialize)]
+struct ScopeVariablePath {
+    scope: String,
+    variable_id: Uuid,
+}
+
+#[derive(Serialize, Deserialize)]
+struct CreateScopeVariablePayload {
+    name: String,
+    value: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct UpdateScopeVariablePayload {
+    name: Option<String>,
+    value: Option<String>,
+}
+
+#[derive(Serialize)]
+struct ScopeVariableListItem {
+    uuid: String,
+    name: String,
+    value: String,
+}
+
+#[derive(Serialize)]
+struct ScopeVariableListResponse {
+    variables: Vec<ScopeVariableListItem>,
+}
+
+impl From<Vec<domain::variable::Variable>> for ScopeVariableListResponse {
+    fn from(variables: Vec<domain::variable::Variable>) -> Self {
+        Self {
+            variables: variables
+                .into_iter()
+                .map(|var| ScopeVariableListItem {
+                    uuid: var.uuid.to_string(),
+                    name: var.name,
+                    value: var.value,
+                })
+                .collect(),
+        }
+    }
+}
+
+async fn list_scope_variables(
+    State(state): State<RuntimeStateRef>,
+    Path(scope_name): Path<String>,
+) -> impl IntoResponse {
+    let variables: ScopeVariableListResponse =
+        variable_service::find_all_vars(&state.db, &scope_name)
+            .await
+            .into();
+
+    Json(variables).into_response()
+}
+
+#[derive(Serialize)]
+struct CreatedScopeVariableResponse {
+    uuid: String,
+    name: String,
+    value: String,
+}
+
+impl From<domain::variable::Variable> for CreatedScopeVariableResponse {
+    fn from(var: domain::variable::Variable) -> Self {
+        Self {
+            uuid: var.uuid.to_string(),
+            name: var.name.to_owned(),
+            value: var.value.to_owned(),
+        }
+    }
+}
+
+async fn create_scope_variable(
+    State(state): State<RuntimeStateRef>,
+    Path(scope_name): Path<String>,
+    Json(payload): Json<CreateScopeVariablePayload>,
+) -> impl IntoResponse {
+    let created_var =
+        variable_service::create_var(&state.db, &scope_name, &payload.name, &payload.value).await;
+
+    Json(CreatedScopeVariableResponse::from(created_var)).into_response()
+}
+
+#[derive(Serialize)]
+struct ScopeVariableResponse {
+    uuid: String,
+    name: String,
+    value: String,
+}
+
+impl From<domain::variable::Variable> for ScopeVariableResponse {
+    fn from(var: domain::variable::Variable) -> Self {
+        Self {
+            uuid: var.uuid.to_string(),
+            name: var.name,
+            value: var.value,
+        }
+    }
+}
+
+async fn get_scope_variable(
+    State(state): State<RuntimeStateRef>,
+    Path(scope_variable_path): Path<ScopeVariablePath>,
+) -> impl IntoResponse {
+    let var = variable_service::find_var_by_id(&state.db, &scope_variable_path.variable_id).await;
+    if let Some(var) = var {
+        Json(ScopeVariableResponse::from(var)).into_response()
+    } else {
+        StatusCode::NOT_FOUND.into_response()
+    }
+}
+
+async fn update_scope_variable(
+    State(state): State<RuntimeStateRef>,
+    Path(scope_variable_path): Path<ScopeVariablePath>,
+    Json(payload): Json<UpdateScopeVariablePayload>,
+) -> impl IntoResponse {
+    variable_service::update_var(
+        &state.db,
+        &scope_variable_path.variable_id,
+        payload.name.as_deref(),
+        payload.value.as_deref(),
+    )
+    .await
+    .map(ScopeVariableResponse::from)
+    .map(Json)
+    .map_or(
+        StatusCode::NOT_FOUND.into_response(),
+        IntoResponse::into_response,
+    )
+}
+
+async fn delete_scope_variable(
+    State(state): State<RuntimeStateRef>,
+    Path(scope_variable_path): Path<ScopeVariablePath>,
+) -> impl IntoResponse {
+    variable_service::delete_var_by_id(&state.db, &scope_variable_path.variable_id).await;
+
+    StatusCode::ACCEPTED.into_response()
 }
 
 #[derive(Serialize)]

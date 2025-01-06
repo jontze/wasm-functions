@@ -4,6 +4,7 @@ use tabled::{Table, Tabled};
 
 #[derive(Deserialize)]
 struct Variable {
+    uuid: String,
     name: String,
     value: String,
 }
@@ -17,6 +18,7 @@ struct VariableListResponse {
 struct OutputTableRow {
     name: String,
     value: String,
+    uuid: String,
 }
 
 impl From<VariableListResponse> for Vec<OutputTableRow> {
@@ -27,6 +29,7 @@ impl From<VariableListResponse> for Vec<OutputTableRow> {
             .map(|variable| OutputTableRow {
                 name: variable.name,
                 value: variable.value,
+                uuid: variable.uuid,
             })
             .collect()
     }

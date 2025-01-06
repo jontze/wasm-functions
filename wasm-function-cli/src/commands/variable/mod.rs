@@ -41,8 +41,13 @@ pub(super) struct EditVariableCommand {
     #[clap(short, long)]
     id: String,
     /// New value of the variable
+    /// If not provided, the value will not be changed
     #[clap(short, long)]
-    value: String,
+    value: Option<String>,
+    /// New name of the variable
+    /// If not provided, the name will not be changed
+    #[clap(short, long)]
+    name: Option<String>,
 }
 
 #[derive(Parser)]
@@ -88,7 +93,8 @@ impl<TCredStore: CredentialStoreTrait> command_executor::CommandExecutorTrait<TC
                 function_runtime_url,
                 &edit_command.scope_name,
                 &edit_command.id,
-                &edit_command.value,
+                edit_command.value.as_ref(),
+                edit_command.name.as_ref(),
             ),
             VariableCommand::List(list_command) => list::execute(
                 &active_token,

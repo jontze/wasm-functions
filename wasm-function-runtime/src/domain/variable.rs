@@ -1,6 +1,5 @@
 use uuid::Uuid;
 
-#[allow(unused)]
 pub(crate) struct Variable {
     pub uuid: Uuid,
     pub name: String,
