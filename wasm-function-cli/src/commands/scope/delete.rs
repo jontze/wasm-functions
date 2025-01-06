@@ -1,6 +1,6 @@
 use miette::IntoDiagnostic;
 
-pub(crate) fn execute(token: &str, runtime_url: &str, name: &str) -> miette::Result<()> {
+pub(super) fn execute(token: &str, runtime_url: &str, name: &str) -> miette::Result<()> {
     let client = reqwest::blocking::Client::new();
 
     client

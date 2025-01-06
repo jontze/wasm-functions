@@ -35,7 +35,7 @@ impl From<FunctionListResponse> for Vec<OutputTableRow> {
     }
 }
 
-pub(crate) fn execute(token: &str, runtime_url: &str, scope_name: &str) -> miette::Result<()> {
+pub(super) fn execute(token: &str, runtime_url: &str, scope_name: &str) -> miette::Result<()> {
     let client = reqwest::blocking::Client::new();
 
     let response = client

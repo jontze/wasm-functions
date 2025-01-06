@@ -1,17 +1,17 @@
 use miette::IntoDiagnostic;
 
-pub(crate) fn execute(
+pub(super) fn execute(
     token: &str,
     runtime_url: &str,
     scope_name: &str,
     function_id: &str,
-    kind: &super::super::FunctionKind,
+    kind: &super::FunctionKind,
 ) -> miette::Result<()> {
     let client = reqwest::blocking::Client::new();
 
     let func_kind = match kind {
-        super::super::FunctionKind::Http => "http",
-        super::super::FunctionKind::Scheduled => "scheduled",
+        super::FunctionKind::Http => "http",
+        super::FunctionKind::Scheduled => "scheduled",
     };
 
     client

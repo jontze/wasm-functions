@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Parser, Subcommand};
 use command_executor::CommandExecutorTrait;
 
 pub(crate) mod command_context;
@@ -8,8 +8,12 @@ mod function;
 mod login;
 mod logout;
 mod scope;
+mod variable;
 
 pub(crate) use command_context::CommandContext;
+use function::FunctionCommand;
+use scope::ScopeCommand;
+use variable::VariableCommand;
 
 use crate::cred_store::CredentialStoreTrait;
 
@@ -28,12 +32,15 @@ enum Command {
     Logout,
     /// Deploy a local function to the runtime
     Deploy(DeployCommand),
-    /// Commands to manage functions
+    /// Commands to manage functions of a scope
     #[clap(subcommand)]
     Function(FunctionCommand),
     /// Commands to manage scopes
     #[clap(subcommand)]
     Scope(ScopeCommand),
+    /// Commands to manage variables of a scope
+    #[clap(subcommand)]
+    Variable(VariableCommand),
 }
 
 #[derive(Parser)]
@@ -44,55 +51,6 @@ struct DeployCommand {
     /// Path to the wasm file
     #[arg(short, long)]
     wasm_path: std::path::PathBuf,
-}
-
-#[derive(Subcommand)]
-enum FunctionCommand {
-    /// Delete a function by name
-    Delete(DeleteFunctionCommand),
-    /// List all functions of a scope
-    List(ListFunctionCommand),
-}
-
-#[derive(Parser)]
-struct DeleteFunctionCommand {
-    /// Id of the function to delete
-    #[clap(short, long)]
-    id: String,
-    /// Name of the scope the function belongs to
-    #[clap(short, long)]
-    scope_name: String,
-    /// Kind of the function to delete
-    #[clap(short, long)]
-    kind: FunctionKind,
-}
-
-#[derive(Clone, ValueEnum)]
-enum FunctionKind {
-    Http,
-    Scheduled,
-}
-
-#[derive(Parser)]
-struct ListFunctionCommand {
-    /// Name of the scope the functions belong to
-    #[clap(short, long)]
-    scope_name: String,
-}
-
-#[derive(Subcommand)]
-enum ScopeCommand {
-    /// List all scopes
-    List,
-    /// Delete a scope by name
-    Delete(DeleteScopeCommand),
-}
-
-#[derive(Parser)]
-struct DeleteScopeCommand {
-    /// Name of the scope to delete
-    #[clap(short, long)]
-    name: String,
 }
 
 impl<TCredStore: CredentialStoreTrait> command_executor::CommandExecutorTrait<TCredStore>
@@ -121,46 +79,7 @@ impl<TCredStore: CredentialStoreTrait> command_executor::CommandExecutorTrait<TC
             Command::Deploy(deploy_command) => deploy_command.execute(ctx),
             Command::Function(function_command) => function_command.execute(ctx),
             Command::Scope(scope_command) => scope_command.execute(ctx),
-        }
-    }
-}
-
-impl<TCredStore: CredentialStoreTrait> command_executor::CommandExecutorTrait<TCredStore>
-    for FunctionCommand
-{
-    fn execute(&self, ctx: &mut command_context::CommandContext<TCredStore>) -> miette::Result<()> {
-        let active_token = crate::auth::token_refresh::get_active_token(ctx)?;
-        let function_runtime_url = &ctx.config.function_runtime_url;
-
-        match self {
-            FunctionCommand::Delete(delete_command) => function::delete::execute(
-                &active_token,
-                function_runtime_url,
-                &delete_command.scope_name,
-                &delete_command.id,
-                &delete_command.kind,
-            ),
-            FunctionCommand::List(list_command) => function::list::execute(
-                &active_token,
-                function_runtime_url,
-                &list_command.scope_name,
-            ),
-        }
-    }
-}
-
-impl<TCredStore: CredentialStoreTrait> command_executor::CommandExecutorTrait<TCredStore>
-    for ScopeCommand
-{
-    fn execute(&self, ctx: &mut command_context::CommandContext<TCredStore>) -> miette::Result<()> {
-        let active_token = crate::auth::token_refresh::get_active_token(ctx)?;
-        let function_runtime_url = &ctx.config.function_runtime_url;
-
-        match self {
-            ScopeCommand::List => scope::list::execute(&active_token, function_runtime_url),
-            ScopeCommand::Delete(delete_command) => {
-                scope::delete::execute(&active_token, function_runtime_url, &delete_command.name)
-            }
+            Command::Variable(variable_command) => variable_command.execute(ctx),
         }
     }
 }
