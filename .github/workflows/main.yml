@@ -1,0 +1,13 @@
+name: Main
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Test
+    uses: jontze/.workflows/.github/workflows/rust_test.yaml@main
+    with:
+      build: true
+      unit-tests: true
