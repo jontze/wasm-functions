@@ -107,7 +107,8 @@ pub unsafe fn _export_handle_request_cabi<T: Guest>(
     arg7: *mut u8,
     arg8: usize,
 ) -> *mut u8 {
-    #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
+    #[cfg(target_arch = "wasm32")]
+    _rt::run_ctors_once();
     let len0 = arg2;
     let bytes0 = _rt::Vec::from_raw_parts(arg1.cast(), len0, len0);
     let base7 = arg3;
@@ -174,10 +175,7 @@ pub unsafe fn _export_handle_request_cabi<T: Guest>(
             *ptr17.add(4).cast::<u16>() = (_rt::as_i32(status_code18)) as u16;
             let vec22 = headers18;
             let len22 = vec22.len();
-            let layout22 = _rt::alloc::Layout::from_size_align_unchecked(
-                vec22.len() * 16,
-                4,
-            );
+            let layout22 = _rt::alloc::Layout::from_size_align_unchecked(vec22.len() * 16, 4);
             let result22 = if layout22.size() != 0 {
                 let ptr = _rt::alloc::alloc(layout22).cast::<u8>();
                 if ptr.is_null() {
@@ -190,7 +188,10 @@ pub unsafe fn _export_handle_request_cabi<T: Guest>(
             for (i, e) in vec22.into_iter().enumerate() {
                 let base = result22.add(i * 16);
                 {
-                    let Header { name: name19, value: value19 } = e;
+                    let Header {
+                        name: name19,
+                        value: value19,
+                    } = e;
                     let vec20 = (name19.into_bytes()).into_boxed_slice();
                     let ptr20 = vec20.as_ptr().cast::<u8>();
                     let len20 = vec20.len();

@@ -1,7 +1,8 @@
 #[doc(hidden)]
 #[allow(non_snake_case)]
 pub unsafe fn _export_run_job_cabi<T: Guest>() -> i32 {
-    #[cfg(target_arch = "wasm32")] _rt::run_ctors_once();
+    #[cfg(target_arch = "wasm32")]
+    _rt::run_ctors_once();
     let result0 = T::run_job();
     let result1 = match result0 {
         Ok(_) => 0i32,
