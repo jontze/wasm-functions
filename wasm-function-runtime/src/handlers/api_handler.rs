@@ -20,28 +20,28 @@ pub(crate) fn router(
     axum::Router::new()
         .route("/deploy", post(deploy_function_with_manifest))
         .route("/scope", get(list_scopes))
-        .route("/scope/:scope", delete(delete_scope))
-        .route("/scope/:scope/variable", get(list_scope_variables))
-        .route("/scope/:scope/variable", post(create_scope_variable))
+        .route("/scope/{scope}", delete(delete_scope))
+        .route("/scope/{scope}/variable", get(list_scope_variables))
+        .route("/scope/{scope}/variable", post(create_scope_variable))
         .route(
-            "/scope/:scope/variable/:variable_id",
+            "/scope/{scope}/variable/{variable_id}",
             get(get_scope_variable),
         )
         .route(
-            "/scope/:scope/variable/:variable_id",
+            "/scope/{scope}/variable/{variable_id}",
             put(update_scope_variable),
         )
         .route(
-            "/scope/:scope/variable/:variable_id",
+            "/scope/{scope}/variable/{variable_id}",
             delete(delete_scope_variable),
         )
-        .route("/scope/:scope/function", get(list_scope_functions))
+        .route("/scope/{scope}/function", get(list_scope_functions))
         .route(
-            "/scope/:scope/function/http/:function_id",
+            "/scope/{scope}/function/http/{function_id}",
             delete(delete_http_function),
         )
         .route(
-            "/scope/:scope/function/scheduled/:function_id",
+            "/scope/{scope}/function/scheduled/{function_id}",
             delete(delete_scheduled_function),
         )
         .route_layer(axum::middleware::from_fn_with_state(

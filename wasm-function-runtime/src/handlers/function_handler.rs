@@ -14,7 +14,7 @@ use crate::{
 
 pub(crate) fn router() -> axum::Router<RuntimeStateRef> {
     axum::Router::new().route(
-        "/:scope/*function_path",
+        "/{scope}/{*function_path}",
         get(handle_get_request).post(handle_post_request),
     )
 }
