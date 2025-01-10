@@ -86,8 +86,14 @@ pub(crate) async fn find_http_func(
         None => return None,
     };
 
+    let path = if function_path.starts_with('/') {
+        function_path.to_string()
+    } else {
+        format!("/{}", function_path)
+    };
+
     let http_function = entity::http_function::Entity::find()
-        .filter(entity::http_function::Column::Path.eq(format!("/{}", function_path)))
+        .filter(entity::http_function::Column::Path.eq(&path))
         .filter(entity::http_function::Column::Method.eq(function_method))
         .filter(entity::http_function::Column::ScopeId.eq(scope.id))
         .one(db_pool)

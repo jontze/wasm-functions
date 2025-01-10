@@ -1,4 +1,4 @@
-use wasmtime_wasi::{ResourceTable, WasiCtx, WasiView};
+use wasmtime_wasi::{ResourceTable, WasiCtx, WasiCtxBuilder, WasiView};
 
 pub(crate) mod http;
 pub(crate) mod scheduled;
@@ -10,6 +10,37 @@ pub(crate) fn setup_engine() -> wasmtime::Engine {
     config.async_support(true);
 
     wasmtime::Engine::new(&config).expect("Failed to create engine")
+}
+
+pub(crate) struct ComponentStateBuilder {
+    ctx: WasiCtxBuilder,
+    http_ctx: wasmtime_wasi_http::WasiHttpCtx,
+    table: ResourceTable,
+}
+
+impl ComponentStateBuilder {
+    pub fn new() -> Self {
+        Self {
+            ctx: WasiCtxBuilder::new(),
+            http_ctx: wasmtime_wasi_http::WasiHttpCtx::new(),
+            table: ResourceTable::new(),
+        }
+    }
+
+    pub fn with_envs(&mut self, env: &[(impl AsRef<str>, impl AsRef<str>)]) -> &mut Self {
+        self.ctx.envs(env);
+        self
+    }
+
+    pub fn build(mut self) -> ComponentState {
+        let ctx = self.ctx.build();
+
+        ComponentState {
+            ctx,
+            http_ctx: self.http_ctx,
+            table: self.table,
+        }
+    }
 }
 
 pub(crate) struct ComponentState {

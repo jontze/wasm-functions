@@ -9,7 +9,7 @@ use axum::{
 use crate::{
     bindings_function_http,
     server_state::RuntimeStateRef,
-    services::{function_service, wasm_cache_service},
+    services::{function_service, variable_service, wasm_cache_service},
 };
 
 pub(crate) fn router() -> axum::Router<RuntimeStateRef> {
@@ -33,7 +33,7 @@ async fn handle_get_request(
     body: Body,
 ) -> impl IntoResponse {
     // Bootstrap the function
-    let (function, mut function_builder) =
+    let (function, mut function_store) =
         if let Some(func) = bootstrap_function(state.clone(), &path, "GET").await {
             func
         } else {
@@ -54,7 +54,7 @@ async fn handle_get_request(
 
     // Execute the function
     let function_response = function
-        .call_handle_request(&mut function_builder.store, &req)
+        .call_handle_request(&mut function_store, &req)
         .await
         .expect("Failed to call function")
         .expect("Function retunred a failure");
@@ -71,7 +71,7 @@ async fn handle_post_request(
     body: Body,
 ) -> impl IntoResponse {
     // Bootstrap the function
-    let (function, mut function_builder) =
+    let (function, mut function_store) =
         if let Some(func) = bootstrap_function(state.clone(), &path, "POST").await {
             func
         } else {
@@ -92,7 +92,7 @@ async fn handle_post_request(
 
     // Execute the function
     let function_response = function
-        .call_handle_request(&mut function_builder.store, &req)
+        .call_handle_request(&mut function_store, &req)
         .await
         .expect("Failed to call function")
         .expect("Function retunred a failure");
@@ -107,8 +107,9 @@ async fn bootstrap_function(
     method: &str,
 ) -> Option<(
     bindings_function_http::FunctionHttp,
-    crate::component::http::FunctionHttpBuilder,
+    wasmtime::Store<crate::component::ComponentState>,
 )> {
+    let function_vars = variable_service::find_all_vars(&state.db, &path.scope).await;
     if let Some(precompiled_bytes) = wasm_cache_service::extract_http_func(
         &state.registry,
         &path.scope,
@@ -118,13 +119,15 @@ async fn bootstrap_function(
     .await
     {
         // If it is, execute the precompiled wasm
-        let mut http_function_builder = unsafe {
+        let http_function_builder = unsafe {
             crate::component::http::FunctionHttpBuilder::deserialize(
                 &state.engine,
                 &precompiled_bytes,
             )
-        };
-        Some((http_function_builder.build().await, http_function_builder))
+        }
+        .with_variables(&function_vars);
+
+        Some(http_function_builder.build().await)
     } else {
         // If it is not, check the db if there is a function for the route
         let (_, wasm_bytes) = if let Some((http_function, wasm_bytes)) =
@@ -143,8 +146,9 @@ async fn bootstrap_function(
         };
 
         // If there is, extract it from the filesystem and compile it.
-        let mut http_function_builder =
-            crate::component::http::FunctionHttpBuilder::from_binary(&state.engine, &wasm_bytes);
+        let http_function_builder =
+            crate::component::http::FunctionHttpBuilder::from_binary(&state.engine, &wasm_bytes)
+                .with_variables(&function_vars);
 
         // Then save the procompiled wasm to the cache registry to speed up future requests
         let precompiled_bytes = http_function_builder.serialize();
@@ -157,7 +161,7 @@ async fn bootstrap_function(
         )
         .await;
 
-        Some((http_function_builder.build().await, http_function_builder))
+        Some(http_function_builder.build().await)
     }
 }
 
