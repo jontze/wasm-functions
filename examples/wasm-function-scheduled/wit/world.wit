@@ -1,5 +1,0 @@
-package jontze:function-scheduled;
-
-world function-scheduled {
-    export run-job: func() -> result;
-}

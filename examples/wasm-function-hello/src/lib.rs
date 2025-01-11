@@ -1,15 +1,13 @@
-#[allow(warnings)]
-mod bindings;
-
-use bindings::Guest;
+use wasm_function_sdk::scheduled::{export, Function};
 
 struct Component;
 
-impl Guest for Component {
+impl Function for Component {
     /// Say hello!
-    fn hello_world() -> String {
-        "Hello, World!".to_string()
+    fn run_job() -> Result<(), ()> {
+        println!("Hello, World!");
+        Ok(())
     }
 }
 
-bindings::export!(Component with_types_in bindings);
+export!(Component with_types_in wasm_function_sdk::scheduled);

@@ -1,10 +1,7 @@
-#[allow(warnings)]
-mod bindings;
+use serde::{Deserialize, Serialize};
+use wasm_function_sdk::http::{export, Function, Header, Request, Response};
 
 use std::collections::HashMap;
-
-use bindings::Guest;
-use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
 struct JsonResponse {
@@ -19,8 +16,8 @@ struct FunctionResponse {
 
 struct Component;
 
-impl Guest for Component {
-    fn handle_request(_req: bindings::Request) -> Result<bindings::Response, ()> {
+impl Function for Component {
+    fn handle_request(_req: Request) -> Result<Response, ()> {
         let client = waki::Client::new();
         let http_response = client
             .get("https://httpbin.org/get?a=b")
@@ -39,8 +36,8 @@ impl Guest for Component {
             .collect::<HashMap<String, String>>();
 
         // Return something
-        let res = bindings::Response {
-            headers: vec![bindings::Header {
+        let res = Response {
+            headers: vec![Header {
                 name: "Content-Type".to_string(),
                 value: "application/json".to_string(),
             }],
@@ -55,4 +52,4 @@ impl Guest for Component {
     }
 }
 
-bindings::export!(Component with_types_in bindings);
+export!(Component with_types_in wasm_function_sdk::http);
