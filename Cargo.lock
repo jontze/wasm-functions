@@ -4768,7 +4768,7 @@ dependencies = [
 name = "wasm-function-hello"
 version = "0.1.0"
 dependencies = [
- "wit-bindgen-rt 0.36.0",
+ "wit-bindgen-rt 0.37.0",
 ]
 
 [[package]]
@@ -4785,7 +4785,7 @@ dependencies = [
  "serde",
  "serde_json",
  "waki",
- "wit-bindgen-rt 0.36.0",
+ "wit-bindgen-rt 0.37.0",
 ]
 
 [[package]]
@@ -4822,7 +4822,7 @@ dependencies = [
 name = "wasm-function-scheduled"
 version = "0.1.0"
 dependencies = [
- "wit-bindgen-rt 0.36.0",
+ "wit-bindgen-rt 0.37.0",
 ]
 
 [[package]]
@@ -5622,15 +5622,6 @@ name = "wit-bindgen-rt"
 version = "0.34.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "744845cde309b8fa32408d6fb67456449278c66ea4dcd96de29797b302721f02"
-dependencies = [
- "bitflags",
-]
-
-[[package]]
-name = "wit-bindgen-rt"
-version = "0.36.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7947d0131c7c9da3f01dfde0ab8bd4c4cf3c5bd49b6dba0ae640f1fa752572ea"
 dependencies = [
  "bitflags",
 ]
