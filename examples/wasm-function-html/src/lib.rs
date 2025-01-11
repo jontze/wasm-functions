@@ -1,15 +1,12 @@
-#[allow(warnings)]
-mod bindings;
-
-use bindings::Guest;
+use wasm_function_sdk::http::{export, Function, Header, Request, Response};
 
 struct Component;
 
-impl Guest for Component {
-    fn handle_request(_: bindings::Request) -> Result<bindings::Response, ()> {
-        Ok(bindings::Response {
+impl Function for Component {
+    fn handle_request(_: Request) -> Result<Response, ()> {
+        Ok(Response {
             status_code: 200,
-            headers: vec![bindings::Header {
+            headers: vec![Header {
                 name: "Content-Type".to_string(),
                 value: "text/html".to_string(),
             }],
@@ -18,4 +15,4 @@ impl Guest for Component {
     }
 }
 
-bindings::export!(Component with_types_in bindings);
+export!(Component with_types_in wasm_function_sdk::http);

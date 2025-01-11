@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "wasm-function-runtime",
+    "wasm-function-sdk",
     "wasm-function-cli",
     "migration",
     "entity",
