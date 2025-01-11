@@ -1,4 +1,4 @@
-use wasm_function_sdk::http::{export, Function, Header, Request, Response};
+use wasm_function_sdk::blocking::http::{export, Function, Header, Request, Response};
 
 struct Component;
 
@@ -15,4 +15,4 @@ impl Function for Component {
     }
 }
 
-export!(Component with_types_in wasm_function_sdk::http);
+export!(Component);

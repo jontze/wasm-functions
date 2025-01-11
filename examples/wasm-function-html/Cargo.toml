@@ -4,7 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-wasm-function-sdk = { path = "../../wasm-function-sdk" }
+wasm-function-sdk = { path = "../../wasm-function-sdk", features = [
+    "blocking",
+    "http",
+] }
 
 [lib]
 crate-type = ["cdylib"]

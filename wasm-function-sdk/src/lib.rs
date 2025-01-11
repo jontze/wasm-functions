@@ -1,25 +1,5 @@
-#[allow(clippy::too_many_arguments)]
-pub mod http {
+#[cfg(feature = "blocking")]
+pub mod blocking;
 
-    wit_bindgen::generate!({
-        world: "function-http",
-         path: "./wit-http/",
-         pub_export_macro: true,
-         export_macro_name: "export",
-    });
-
-    pub use self::Guest as Function;
-}
-
-#[allow(clippy::too_many_arguments)]
-pub mod scheduled {
-
-    wit_bindgen::generate!({
-        world: "function-scheduled",
-        path: "./wit-scheduled/",
-        pub_export_macro: true,
-        export_macro_name: "export",
-    });
-
-    pub use self::Guest as Function;
-}
+#[cfg(feature = "async")]
+pub mod future;

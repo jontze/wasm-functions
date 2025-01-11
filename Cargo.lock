@@ -4830,6 +4830,7 @@ name = "wasm-function-sdk"
 version = "0.1.0"
 dependencies = [
  "wit-bindgen 0.37.0",
+ "wit-bindgen-rt 0.37.0",
 ]
 
 [[package]]

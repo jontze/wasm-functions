@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use wasm_function_sdk::http::{export, Function, Header, Request, Response};
+use wasm_function_sdk::blocking::http::{export, Function, Header, Request, Response};
 
 use std::collections::HashMap;
 
@@ -52,4 +52,4 @@ impl Function for Component {
     }
 }
 
-export!(Component with_types_in wasm_function_sdk::http);
+export!(Component);

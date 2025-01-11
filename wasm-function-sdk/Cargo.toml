@@ -3,5 +3,15 @@ name = "wasm-function-sdk"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+http = []
+scheduled = []
+blocking = []
+async = ["dep:wit-bindgen-rt"]
+
 [dependencies]
 wit-bindgen = "0.37.0"
+wit-bindgen-rt = { version = "0.37.0", features = [
+    "async",
+    "bitflags",
+], optional = true }
