@@ -38,6 +38,36 @@ pub(crate) async fn find_var_by_id(
         .map(|variable| variable.into())
 }
 
+pub(crate) async fn find_vars_by_scheduled_func_id(
+    db_pool: &crate::db::DbPool,
+    func_id: &Uuid,
+) -> Option<Vec<crate::domain::variable::Variable>> {
+    let func_with_scope = entity::scheduled_function::Entity::find()
+        .filter(entity::scheduled_function::Column::Id.eq(*func_id))
+        .inner_join(entity::scope::Entity)
+        .find_also_related(entity::scope::Entity)
+        .one(db_pool)
+        .await
+        .expect("Failed to query function by id");
+
+    if let Some((_, func_scope)) = func_with_scope {
+        // It's not possible to have a function without a scope, also we do a inner join before so it should be always present
+        let func_scope: entity::scope::Model = func_scope.expect("Function to have a scope");
+        let vars: Vec<domain::variable::Variable> = entity::variable::Entity::find()
+            .filter(entity::variable::Column::ScopeId.eq(func_scope.id))
+            .all(db_pool)
+            .await
+            .expect("Failed to query all variables")
+            .into_iter()
+            .map(|variable| variable.into())
+            .collect();
+
+        Some(vars)
+    } else {
+        None
+    }
+}
+
 pub(crate) async fn delete_var_by_id(db_pool: &crate::db::DbPool, var_id: &Uuid) {
     let var_to_delete = entity::variable::Entity::find()
         .filter(entity::variable::Column::Id.eq(*var_id))

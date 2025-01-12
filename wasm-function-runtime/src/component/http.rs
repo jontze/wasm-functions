@@ -11,7 +11,6 @@ use crate::{
 use super::{ComponentState, ComponentStateBuilder};
 
 pub(crate) struct FunctionHttpBuilder<'a> {
-    // store: Store<ComponentStateBuilder>,
     state_builder: ComponentStateBuilder,
     component: Component,
     linker: Linker<ComponentState>,
@@ -81,7 +80,7 @@ impl<'a> FunctionHttpBuilder<'a> {
             &self.linker,
         )
         .await
-        .expect("Failed to instantiate module");
+        .expect("Failed to instantiate component");
         (func_instance, store)
     }
 }

@@ -1,6 +1,11 @@
 use tracing::{debug, error};
+use wasmtime::Store;
 
-use crate::{bindings_function_scheduled, services::function_service};
+use crate::{
+    bindings_function_scheduled,
+    component::ComponentState,
+    services::{function_service, variable_service},
+};
 
 #[async_trait::async_trait]
 pub(crate) trait FunctionSchedulerManagerTrait: Send + Sync {
@@ -56,10 +61,16 @@ impl FunctionSchedulerManagerTrait for FunctionSchedulerImpl {
 
             Box::pin(async move {
                 debug!("Execute scheduled function '{function_id}' ({job_uuid})",);
+                // Extract function variables
+                let funct_vars =
+                    variable_service::find_vars_by_scheduled_func_id(&db_pool, &function_id)
+                        .await
+                        .expect("Failed to find variables for function");
+
                 // Check if the function is in the cache
-                let (func, mut func_builder): (
+                let (func, mut func_store): (
                     bindings_function_scheduled::FunctionScheduled,
-                    crate::component::scheduled::FunctionScheduledBuilder,
+                    Store<ComponentState>,
                 ) = if let Some(cached_serialized_bytes) = binary_cache.get(&function_id).await {
                     // If it is, deserialize the function from the cache and execute
                     let mut func_builder = unsafe {
@@ -68,7 +79,11 @@ impl FunctionSchedulerManagerTrait for FunctionSchedulerImpl {
                             &cached_serialized_bytes,
                         )
                     };
-                    Some((func_builder.build().await, func_builder))
+
+                    // Add the variables to the function store
+                    func_builder = func_builder.with_variables(&funct_vars);
+
+                    Some(func_builder.build().await)
                 } else {
                     // Otherwise, fetch the function from the database
                     if let Some((_, bytes)) = function_service::find_scheduled_func(
@@ -90,7 +105,10 @@ impl FunctionSchedulerManagerTrait for FunctionSchedulerImpl {
                             .insert(function_id.to_owned(), serialized_bytes)
                             .await;
 
-                        Some((func_builder.build().await, func_builder))
+                        // Add the variables to the function store
+                        func_builder = func_builder.with_variables(&funct_vars);
+
+                        Some(func_builder.build().await)
                     } else {
                         None
                     }
@@ -99,7 +117,7 @@ impl FunctionSchedulerManagerTrait for FunctionSchedulerImpl {
 
                 // Execute the function
                 match func
-                    .call_run_job(&mut func_builder.store)
+                    .call_run_job(&mut func_store)
                     .await
                     .expect("Failed to call function")
                 {
