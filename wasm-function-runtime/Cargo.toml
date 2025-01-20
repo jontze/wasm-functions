@@ -23,7 +23,7 @@ wasmtime = { version = "28.0.1", features = [
     "component-model",
     "cranelift",
 ] }
-wasmtime-wasi = "28.0.1"
+wasmtime-wasi = "29.0.0"
 sea-orm = { version = "1.1.4", features = [
     "sqlx-sqlite",
     "runtime-tokio-rustls",
