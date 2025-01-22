@@ -36,7 +36,7 @@ serde = { version = "1.0.217", features = ["derive"] }
 toml = "0.8.19"
 http = "1.2.0"
 moka = { version = "0.12.10", features = ["future"] }
-wasmtime-wasi-http = "28.0.1"
+wasmtime-wasi-http = "29.0.1"
 tower = "0.5.2"
 jsonwebtoken = "9.3.0"
 reqwest = { version = "0.12.12", default-features = false, features = [
