@@ -12,7 +12,9 @@ pub(crate) async fn run_scheduler<TScheduler>(scheduler: &TScheduler, db_pool: &
 where
     TScheduler: FunctionSchedulerManagerTrait + FunctionSchedulerExecutorTrait,
 {
-    let funcs = function_service::find_all_scheduled_func(db_pool).await;
+    let funcs = function_service::find_all_scheduled_func(db_pool)
+        .await
+        .expect("Failed to fetch scheduled functions");
 
     let count = funcs.len();
 

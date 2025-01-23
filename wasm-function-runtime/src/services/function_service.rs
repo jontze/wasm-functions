@@ -9,18 +9,19 @@ use crate::{
     storage,
 };
 
+use super::errors::ServiceError;
+
 pub(crate) async fn find_all_funcs(
     db_pool: &DbPool,
     scope_name: &str,
-) -> Vec<domain::function::Function> {
-    if let Some(scope) = scope_service::get_scope_by_name(db_pool, scope_name).await {
+) -> Result<Vec<domain::function::Function>, ServiceError> {
+    if let Some(scope) = scope_service::get_scope_by_name(db_pool, scope_name).await? {
         // Extract http functions
         let http_fuctions: Vec<domain::function::HttpFunction> =
             entity::http_function::Entity::find()
                 .filter(entity::http_function::Column::ScopeId.eq(scope.uuid))
                 .all(db_pool)
-                .await
-                .expect("Failed to extract http functions")
+                .await?
                 .into_iter()
                 .map(|model| model.into())
                 .collect();
@@ -30,8 +31,7 @@ pub(crate) async fn find_all_funcs(
             entity::scheduled_function::Entity::find()
                 .filter(entity::scheduled_function::Column::ScopeId.eq(scope.uuid))
                 .all(db_pool)
-                .await
-                .expect("Failed to extract scheduled functions")
+                .await?
                 .into_iter()
                 .map(|model| model.into())
                 .collect();
@@ -51,22 +51,21 @@ pub(crate) async fn find_all_funcs(
         functions.sort_by(|a, b| a.name().cmp(b.name()));
 
         // Return the merged and sorted functions
-        functions
+        Ok(functions)
     } else {
-        vec![]
+        Ok(vec![])
     }
 }
 
 pub(crate) async fn find_all_scheduled_func(
     db_pool: &DbPool,
-) -> Vec<domain::function::ScheduledFunction> {
-    entity::scheduled_function::Entity::find()
+) -> Result<Vec<domain::function::ScheduledFunction>, ServiceError> {
+    Ok(entity::scheduled_function::Entity::find()
         .all(db_pool)
-        .await
-        .expect("Failed to extract scheduled functions")
+        .await?
         .into_iter()
         .map(|model| model.into())
-        .collect()
+        .collect())
 }
 
 pub(crate) async fn find_http_func(
@@ -75,15 +74,14 @@ pub(crate) async fn find_http_func(
     scope_name: &str,
     function_path: &str,
     function_method: &str,
-) -> Option<(domain::function::HttpFunction, Vec<u8>)> {
+) -> Result<Option<(domain::function::HttpFunction, Vec<u8>)>, ServiceError> {
     let scope = match entity::scope::Entity::find()
         .filter(entity::scope::Column::Name.eq(scope_name))
         .one(db_pool)
-        .await
-        .expect("Failed to find scope")
+        .await?
     {
         Some(scope) => scope,
-        None => return None,
+        None => return Ok(None),
     };
 
     let path = if function_path.starts_with('/') {
@@ -97,20 +95,16 @@ pub(crate) async fn find_http_func(
         .filter(entity::http_function::Column::Method.eq(function_method))
         .filter(entity::http_function::Column::ScopeId.eq(scope.id))
         .one(db_pool)
-        .await
-        .unwrap();
+        .await?;
 
     if let Some(http_function) = http_function.map(domain::function::HttpFunction::from) {
         let file_name = http_function.related_wasm();
-        Some((
+        Ok(Some((
             http_function,
-            storage_backend
-                .extract_file_bytes(&file_name)
-                .await
-                .expect("Failed to extract file"),
-        ))
+            storage_backend.extract_file_bytes(&file_name).await?,
+        )))
     } else {
-        None
+        Ok(None)
     }
 }
 
@@ -119,26 +113,20 @@ pub(crate) async fn delete_http_func(
     cache: &crate::server_state::PluginRegistry,
     storage_backend: &dyn storage::StorageBackend,
     function_id: &uuid::Uuid,
-) {
+) -> Result<(), ServiceError> {
     let http_function = entity::http_function::Entity::find()
         .filter(entity::http_function::Column::Id.eq(*function_id))
         .find_also_related(entity::scope::Entity)
         .one(db_pool)
-        .await
-        .expect("Failed to find http function");
+        .await?;
 
     if let Some((http_function, scope)) = http_function {
-        http_function
-            .clone()
-            .delete(db_pool)
-            .await
-            .expect("Failed to delete http function");
+        http_function.clone().delete(db_pool).await?;
 
         let http_function: domain::function::HttpFunction = http_function.into();
         storage_backend
             .delete_file(&http_function.related_wasm())
-            .await
-            .expect("Failed to delete file");
+            .await?;
 
         if let Some(scope) = scope {
             wasm_cache_service::invalidate_http_func(
@@ -150,32 +138,29 @@ pub(crate) async fn delete_http_func(
             .await;
         }
     }
+    Ok(())
 }
 
 pub(crate) async fn find_scheduled_func(
     db_pool: &DbPool,
     storage_backend: &dyn storage::StorageBackend,
     function_id: &uuid::Uuid,
-) -> Option<(domain::function::ScheduledFunction, Vec<u8>)> {
+) -> Result<Option<(domain::function::ScheduledFunction, Vec<u8>)>, ServiceError> {
     let func: Option<domain::function::ScheduledFunction> =
         entity::scheduled_function::Entity::find()
             .filter(entity::scheduled_function::Column::Id.eq(*function_id))
             .one(db_pool)
-            .await
-            .expect("Failed to find scheduled function")
+            .await?
             .map(|model| model.into());
 
     if let Some(func) = func {
         let file_name = func.related_wasm();
-        Some((
+        Ok(Some((
             func,
-            storage_backend
-                .extract_file_bytes(&file_name)
-                .await
-                .expect("Failed to extract file"),
-        ))
+            storage_backend.extract_file_bytes(&file_name).await?,
+        )))
     } else {
-        None
+        Ok(None)
     }
 }
 
@@ -184,28 +169,23 @@ pub(crate) async fn delete_scheduled_func(
     cache: &dyn crate::scheduler::FunctionSchedulerManagerTrait,
     storage_backend: &dyn storage::StorageBackend,
     function_id: &uuid::Uuid,
-) {
+) -> Result<(), ServiceError> {
     let scheduled_function = entity::scheduled_function::Entity::find()
         .filter(entity::scheduled_function::Column::Id.eq(*function_id))
         .one(db_pool)
-        .await
-        .expect("Failed to find scheduled function");
+        .await?;
 
     if let Some(scheduled_function) = scheduled_function {
-        scheduled_function
-            .clone()
-            .delete(db_pool)
-            .await
-            .expect("Failed to delete scheduled function");
+        scheduled_function.clone().delete(db_pool).await?;
 
         let scheduled_function: domain::function::ScheduledFunction = scheduled_function.into();
         storage_backend
             .delete_file(&scheduled_function.related_wasm())
-            .await
-            .expect("Failed to delete file");
+            .await?;
 
         cache.remove(&scheduled_function.uuid).await;
     }
+    Ok(())
 }
 
 pub(crate) async fn create_http_func(
@@ -213,11 +193,11 @@ pub(crate) async fn create_http_func(
     cache_registry: &crate::server_state::PluginRegistry,
     storage_backend: &dyn crate::storage::StorageBackend,
     payload: CreateHttpFunctionPayload,
-) -> domain::function::HttpFunction {
+) -> Result<domain::function::HttpFunction, ServiceError> {
     let transaction = db_pool.start_transaction().await;
 
     let scope =
-        crate::services::scope_service::create_or_find_scope(&transaction, &payload.scope).await;
+        crate::services::scope_service::create_or_find_scope(&transaction, &payload.scope).await?;
 
     let mut previous_http_function: Option<entity::http_function::Model> = None;
 
@@ -225,8 +205,7 @@ pub(crate) async fn create_http_func(
         .filter(entity::http_function::Column::ScopeId.eq(scope.uuid))
         .filter(entity::http_function::Column::Name.eq(&payload.name))
         .one(transaction.deref())
-        .await
-        .expect("Failed to find http function")
+        .await?
     {
         Some(existing_http_function) => {
             previous_http_function = Some(existing_http_function.clone());
@@ -237,29 +216,26 @@ pub(crate) async fn create_http_func(
             existing_http_function.path = Set(payload.path);
             existing_http_function.is_public = Set(payload.is_public);
 
-            existing_http_function
-                .update(transaction.deref())
-                .await
-                .expect("Failed to update http func")
+            existing_http_function.update(transaction.deref()).await?
         }
-        None => entity::http_function::ActiveModel {
-            id: Set(Uuid::new_v4()),
-            name: Set(payload.name),
-            method: Set(payload.method),
-            path: Set(payload.path),
-            is_public: Set(payload.is_public),
-            scope_id: Set(scope.uuid),
+        None => {
+            entity::http_function::ActiveModel {
+                id: Set(Uuid::new_v4()),
+                name: Set(payload.name),
+                method: Set(payload.method),
+                path: Set(payload.path),
+                is_public: Set(payload.is_public),
+                scope_id: Set(scope.uuid),
+            }
+            .insert(transaction.deref())
+            .await?
         }
-        .insert(transaction.deref())
-        .await
-        .expect("Failed to insert http func"),
     }
     .into();
 
     storage_backend
         .store_file(payload.wasm_bytes, &http_function.related_wasm())
-        .await
-        .expect("Failed to store file");
+        .await?;
 
     // If there was a previous http function, invalidate the cache
     if let Some(previous_http_function) = previous_http_function {
@@ -273,7 +249,7 @@ pub(crate) async fn create_http_func(
     }
 
     transaction.commit().await;
-    http_function
+    Ok(http_function)
 }
 
 pub(crate) async fn create_scheduled_func(
@@ -281,11 +257,11 @@ pub(crate) async fn create_scheduled_func(
     func_scheduler: &dyn crate::scheduler::FunctionSchedulerManagerTrait,
     storage_backend: &dyn crate::storage::StorageBackend,
     payload: CreateScheduledFunctionPayload,
-) -> domain::function::ScheduledFunction {
+) -> Result<domain::function::ScheduledFunction, ServiceError> {
     let transaction = db_pool.start_transaction().await;
 
     let scope =
-        crate::services::scope_service::create_or_find_scope(&transaction, &payload.scope).await;
+        crate::services::scope_service::create_or_find_scope(&transaction, &payload.scope).await?;
 
     let mut previous_scheduled_func: Option<entity::scheduled_function::Model> = None;
 
@@ -294,8 +270,7 @@ pub(crate) async fn create_scheduled_func(
             .filter(entity::scheduled_function::Column::ScopeId.eq(scope.uuid))
             .filter(entity::scheduled_function::Column::Name.eq(&payload.name))
             .one(transaction.deref())
-            .await
-            .expect("Failed to find http function")
+            .await?
         {
             Some(existing_scheduled_func) => {
                 previous_scheduled_func = Some(existing_scheduled_func.clone());
@@ -304,10 +279,7 @@ pub(crate) async fn create_scheduled_func(
                 existing_scheduled_func.scope_id = Set(scope.uuid);
                 existing_scheduled_func.cron = Set(payload.cron);
 
-                existing_scheduled_func
-                    .update(transaction.deref())
-                    .await
-                    .expect("Failed to update scheduled func")
+                existing_scheduled_func.update(transaction.deref()).await?
             }
             None => {
                 // No existing scheduled func, so we need to create one
@@ -318,16 +290,14 @@ pub(crate) async fn create_scheduled_func(
                     scope_id: Set(scope.uuid),
                 }
                 .insert(transaction.deref())
-                .await
-                .expect("Failed to insert scheduled func")
+                .await?
             }
         }
         .into();
 
     storage_backend
         .store_file(payload.wasm_bytes, &scheduled_function.related_wasm())
-        .await
-        .expect("Failed to store file");
+        .await?;
 
     transaction.commit().await;
 
@@ -339,5 +309,5 @@ pub(crate) async fn create_scheduled_func(
         .add(&scheduled_function.uuid, &scheduled_function.cron)
         .await;
 
-    scheduled_function
+    Ok(scheduled_function)
 }

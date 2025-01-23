@@ -109,7 +109,9 @@ async fn bootstrap_function(
     bindings_function_http::FunctionHttp,
     wasmtime::Store<crate::component::ComponentState>,
 )> {
-    let function_vars = variable_service::find_all_vars(&state.db, &path.scope).await;
+    let function_vars = variable_service::find_all_vars(&state.db, &path.scope)
+        .await
+        .expect("Failed to find variables");
     if let Some(precompiled_bytes) = wasm_cache_service::extract_http_func(
         &state.registry,
         &path.scope,
@@ -139,6 +141,7 @@ async fn bootstrap_function(
                 method,
             )
             .await
+            .expect("Failed to find function")
         {
             (http_function, wasm_bytes)
         } else {

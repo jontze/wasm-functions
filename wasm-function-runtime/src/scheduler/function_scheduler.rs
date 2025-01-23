@@ -65,6 +65,7 @@ impl FunctionSchedulerManagerTrait for FunctionSchedulerImpl {
                 let funct_vars =
                     variable_service::find_vars_by_scheduled_func_id(&db_pool, &function_id)
                         .await
+                        .expect("Failed to find variables for function")
                         .expect("Failed to find variables for function");
 
                 // Check if the function is in the cache
@@ -92,6 +93,7 @@ impl FunctionSchedulerManagerTrait for FunctionSchedulerImpl {
                         &function_id,
                     )
                     .await
+                    .expect("Failed to find function")
                     {
                         // Exract the function from the storage
                         let mut func_builder =

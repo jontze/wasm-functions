@@ -120,7 +120,8 @@ async fn deploy_function_with_manifest(
                         &*state.storage_backend,
                         payload,
                     )
-                    .await;
+                    .await
+                    .map_err(|e| e.into_response())?;
                 } else {
                     return Err("HTTP function must have HTTP section in manifest".into_response());
                 }
@@ -140,7 +141,8 @@ async fn deploy_function_with_manifest(
                         &*state.storage_backend,
                         payload,
                     )
-                    .await;
+                    .await
+                    .map_err(|e| e.into_response())?;
                 } else {
                     return Err("Scheduled function must have scheduled section".into_response());
                 }
@@ -150,16 +152,17 @@ async fn deploy_function_with_manifest(
         return Err("Manifest file is required".into_response());
     }
 
-    Ok("OK".into_response())
+    Ok(StatusCode::CREATED)
 }
 
 async fn delete_scope(
     State(state): State<RuntimeStateRef>,
     Path(scope_name): Path<String>,
 ) -> impl IntoResponse {
-    scope_service::delete_scope(&state.db, &scope_name).await;
-
-    "OK".into_response()
+    scope_service::delete_scope(&state.db, &scope_name)
+        .await
+        .map(|_| StatusCode::ACCEPTED)
+        .into_response()
 }
 
 #[derive(Serialize)]
@@ -174,8 +177,11 @@ impl From<Vec<domain::scope::FunctionScope>> for ScopeListResponse {
 }
 
 async fn list_scopes(State(state): State<RuntimeStateRef>) -> impl IntoResponse {
-    let scopes: ScopeListResponse = scope_service::get_all_scopes(&state.db).await.into();
-    Json(scopes).into_response()
+    scope_service::get_all_scopes(&state.db)
+        .await
+        .map(ScopeListResponse::from)
+        .map(Json)
+        .into_response()
 }
 
 #[derive(Serialize, Deserialize)]
@@ -227,12 +233,11 @@ async fn list_scope_variables(
     State(state): State<RuntimeStateRef>,
     Path(scope_name): Path<String>,
 ) -> impl IntoResponse {
-    let variables: ScopeVariableListResponse =
-        variable_service::find_all_vars(&state.db, &scope_name)
-            .await
-            .into();
-
-    Json(variables).into_response()
+    variable_service::find_all_vars(&state.db, &scope_name)
+        .await
+        .map(ScopeVariableListResponse::from)
+        .map(Json)
+        .into_response()
 }
 
 #[derive(Serialize)]
@@ -257,10 +262,11 @@ async fn create_scope_variable(
     Path(scope_name): Path<String>,
     Json(payload): Json<CreateScopeVariablePayload>,
 ) -> impl IntoResponse {
-    let created_var =
-        variable_service::create_var(&state.db, &scope_name, &payload.name, &payload.value).await;
-
-    Json(CreatedScopeVariableResponse::from(created_var)).into_response()
+    variable_service::create_var(&state.db, &scope_name, &payload.name, &payload.value)
+        .await
+        .map(CreatedScopeVariableResponse::from)
+        .map(Json)
+        .into_response()
 }
 
 #[derive(Serialize)]
@@ -284,12 +290,17 @@ async fn get_scope_variable(
     State(state): State<RuntimeStateRef>,
     Path(scope_variable_path): Path<ScopeVariablePath>,
 ) -> impl IntoResponse {
-    let var = variable_service::find_var_by_id(&state.db, &scope_variable_path.variable_id).await;
-    if let Some(var) = var {
-        Json(ScopeVariableResponse::from(var)).into_response()
-    } else {
-        StatusCode::NOT_FOUND.into_response()
-    }
+    variable_service::find_var_by_id(&state.db, &scope_variable_path.variable_id)
+        .await
+        .map(|model| {
+            if let Some(model) = model {
+                let response: ScopeVariableResponse = model.into();
+                Json(response).into_response()
+            } else {
+                StatusCode::NOT_FOUND.into_response()
+            }
+        })
+        .into_response()
 }
 
 async fn update_scope_variable(
@@ -304,21 +315,25 @@ async fn update_scope_variable(
         payload.value.as_deref(),
     )
     .await
-    .map(ScopeVariableResponse::from)
-    .map(Json)
-    .map_or(
-        StatusCode::NOT_FOUND.into_response(),
-        IntoResponse::into_response,
-    )
+    .map(|model| {
+        if let Some(model) = model {
+            let response: ScopeVariableResponse = model.into();
+            Json(response).into_response()
+        } else {
+            StatusCode::NOT_FOUND.into_response()
+        }
+    })
+    .into_response()
 }
 
 async fn delete_scope_variable(
     State(state): State<RuntimeStateRef>,
     Path(scope_variable_path): Path<ScopeVariablePath>,
 ) -> impl IntoResponse {
-    variable_service::delete_var_by_id(&state.db, &scope_variable_path.variable_id).await;
-
-    StatusCode::ACCEPTED.into_response()
+    variable_service::delete_var_by_id(&state.db, &scope_variable_path.variable_id)
+        .await
+        .map(|_| StatusCode::ACCEPTED)
+        .into_response()
 }
 
 #[derive(Serialize)]
@@ -352,11 +367,11 @@ async fn list_scope_functions(
     State(state): State<RuntimeStateRef>,
     Path(scope_name): Path<String>,
 ) -> impl IntoResponse {
-    let functions: ScopeFunctionListResponse =
-        function_service::find_all_funcs(&state.db, &scope_name)
-            .await
-            .into();
-    Json(functions).into_response()
+    function_service::find_all_funcs(&state.db, &scope_name)
+        .await
+        .map(ScopeFunctionListResponse::from)
+        .map(Json)
+        .into_response()
 }
 
 #[derive(Deserialize)]
@@ -376,9 +391,9 @@ async fn delete_http_function(
         &*state.storage_backend,
         &path.function_id,
     )
-    .await;
-
-    "OK".into_response()
+    .await
+    .map(|_| StatusCode::ACCEPTED)
+    .into_response()
 }
 
 async fn delete_scheduled_function(
@@ -391,7 +406,7 @@ async fn delete_scheduled_function(
         &*state.storage_backend,
         &path.function_id,
     )
-    .await;
-
-    "OK".into_response()
+    .await
+    .map(|_| StatusCode::ACCEPTED)
+    .into_response()
 }

@@ -1,18 +1,17 @@
 use sea_orm::{prelude::*, IntoActiveModel, Set};
 
-use super::scope_service;
+use super::{errors::ServiceError, scope_service};
 use crate::domain;
 
 pub(crate) async fn find_all_vars(
     db_pool: &crate::db::DbPool,
     scope_name: &str,
-) -> Vec<crate::domain::variable::Variable> {
-    if let Some(scope) = scope_service::get_scope_by_name(db_pool, scope_name).await {
+) -> Result<Vec<crate::domain::variable::Variable>, ServiceError> {
+    if let Some(scope) = scope_service::get_scope_by_name(db_pool, scope_name).await? {
         let mut vars: Vec<domain::variable::Variable> = entity::variable::Entity::find()
             .filter(entity::variable::Column::ScopeId.eq(scope.uuid))
             .all(db_pool)
-            .await
-            .expect("Failed to query all variables")
+            .await?
             .into_iter()
             .map(|variable| variable.into())
             .collect();
@@ -20,35 +19,33 @@ pub(crate) async fn find_all_vars(
         // Sort the variables by name
         vars.sort_by(|a, b| a.name.cmp(&b.name));
 
-        vars
+        Ok(vars)
     } else {
-        vec![]
+        Ok(vec![])
     }
 }
 
 pub(crate) async fn find_var_by_id(
     db_pool: &crate::db::DbPool,
     var_id: &Uuid,
-) -> Option<crate::domain::variable::Variable> {
-    entity::variable::Entity::find()
+) -> Result<Option<crate::domain::variable::Variable>, ServiceError> {
+    Ok(entity::variable::Entity::find()
         .filter(entity::variable::Column::Id.eq(*var_id))
         .one(db_pool)
-        .await
-        .expect("Failed to query variable by id")
-        .map(|variable| variable.into())
+        .await?
+        .map(|variable| variable.into()))
 }
 
 pub(crate) async fn find_vars_by_scheduled_func_id(
     db_pool: &crate::db::DbPool,
     func_id: &Uuid,
-) -> Option<Vec<crate::domain::variable::Variable>> {
+) -> Result<Option<Vec<crate::domain::variable::Variable>>, ServiceError> {
     let func_with_scope = entity::scheduled_function::Entity::find()
         .filter(entity::scheduled_function::Column::Id.eq(*func_id))
         .inner_join(entity::scope::Entity)
         .find_also_related(entity::scope::Entity)
         .one(db_pool)
-        .await
-        .expect("Failed to query function by id");
+        .await?;
 
     if let Some((_, func_scope)) = func_with_scope {
         // It's not possible to have a function without a scope, also we do a inner join before so it should be always present
@@ -56,30 +53,30 @@ pub(crate) async fn find_vars_by_scheduled_func_id(
         let vars: Vec<domain::variable::Variable> = entity::variable::Entity::find()
             .filter(entity::variable::Column::ScopeId.eq(func_scope.id))
             .all(db_pool)
-            .await
-            .expect("Failed to query all variables")
+            .await?
             .into_iter()
             .map(|variable| variable.into())
             .collect();
 
-        Some(vars)
+        Ok(Some(vars))
     } else {
-        None
+        Ok(None)
     }
 }
 
-pub(crate) async fn delete_var_by_id(db_pool: &crate::db::DbPool, var_id: &Uuid) {
+pub(crate) async fn delete_var_by_id(
+    db_pool: &crate::db::DbPool,
+    var_id: &Uuid,
+) -> Result<(), ServiceError> {
     let var_to_delete = entity::variable::Entity::find()
         .filter(entity::variable::Column::Id.eq(*var_id))
         .one(db_pool)
-        .await
-        .expect("Failed to query variable by id");
+        .await?;
 
     if let Some(var) = var_to_delete {
-        var.delete(db_pool)
-            .await
-            .expect("Failed to delete variable by id");
+        var.delete(db_pool).await?;
     }
+    Ok(())
 }
 
 pub(crate) async fn create_var(
@@ -87,9 +84,9 @@ pub(crate) async fn create_var(
     scope_name: &str,
     name: &str,
     value: &str,
-) -> crate::domain::variable::Variable {
+) -> Result<crate::domain::variable::Variable, ServiceError> {
     let scope = scope_service::get_scope_by_name(db_pool, scope_name)
-        .await
+        .await?
         .expect("Scope not found");
     let var_active = entity::variable::ActiveModel {
         id: Set(Uuid::new_v4()),
@@ -98,11 +95,7 @@ pub(crate) async fn create_var(
         scope_id: Set(scope.uuid),
     };
 
-    var_active
-        .insert(db_pool)
-        .await
-        .expect("Failed to insert variable")
-        .into()
+    Ok(var_active.insert(db_pool).await?.into())
 }
 
 pub(crate) async fn update_var(
@@ -110,12 +103,11 @@ pub(crate) async fn update_var(
     var_id: &Uuid,
     name: Option<&str>,
     value: Option<&str>,
-) -> Option<crate::domain::variable::Variable> {
+) -> Result<Option<crate::domain::variable::Variable>, ServiceError> {
     if let Some(var) = entity::variable::Entity::find()
         .filter(entity::variable::Column::Id.eq(*var_id))
         .one(db_pool)
-        .await
-        .expect("Failed to query variable by id")
+        .await?
     {
         let mut var = var.into_active_model();
         if let Some(name) = name {
@@ -126,13 +118,8 @@ pub(crate) async fn update_var(
             var.value = Set(value.to_string());
         }
 
-        Some(
-            var.update(db_pool)
-                .await
-                .expect("Failed to update variable")
-                .into(),
-        )
+        Ok(Some(var.update(db_pool).await?.into()))
     } else {
-        None
+        Ok(None)
     }
 }
