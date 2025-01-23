@@ -8,6 +8,13 @@ updates:
     commit-message:
       prefix: "fix(deps)"
       prefix-development: "chore(dev-deps)"
+    groups:
+      wasmtime-dependencies:
+        patterns:
+          - "wasmtime*"
+      wit-bindgen-dependencies:
+        patterns:
+          - "wit-bindgen*"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
