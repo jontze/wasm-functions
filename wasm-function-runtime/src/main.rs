@@ -12,6 +12,7 @@ pub(crate) mod server_state;
 pub(crate) mod services;
 pub(crate) mod startup;
 pub(crate) mod storage;
+mod utils;
 
 pub(crate) mod bindings_function_http {
     wasmtime::component::bindgen!({
