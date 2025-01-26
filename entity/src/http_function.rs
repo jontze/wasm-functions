@@ -12,6 +12,7 @@ pub struct Model {
     pub path: String,
     pub method: String,
     pub is_public: bool,
+    pub content_hash: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

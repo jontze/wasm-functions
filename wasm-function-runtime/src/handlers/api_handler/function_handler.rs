@@ -8,7 +8,10 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::{domain, function_service, RuntimeStateRef};
+use super::{
+    domain::{self, function::WasmFunctionTrait},
+    function_service, RuntimeStateRef,
+};
 
 pub(super) fn router() -> Router<RuntimeStateRef> {
     Router::new()
@@ -71,7 +74,7 @@ async fn delete_http_function(
 ) -> impl IntoResponse {
     function_service::delete_http_func(
         &state.db,
-        &state.registry,
+        &*state.function_cache,
         &*state.storage_backend,
         &path.function_id,
     )

@@ -4,6 +4,7 @@ mod component;
 pub(crate) mod config;
 mod db;
 pub(crate) mod domain;
+pub(crate) mod function_cache;
 pub(crate) mod handlers;
 pub(crate) mod middlewares;
 mod routes;

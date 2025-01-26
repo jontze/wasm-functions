@@ -15,7 +15,8 @@ pub(crate) async fn run_server() {
     .await;
     db::run_migrations(&db_pool).await;
 
-    let storage_backend = std::sync::Arc::new(crate::storage::FileSystemStorage::default());
+    let storage_backend = std::sync::Arc::new(crate::storage::CachedStorage::default());
+    let function_cache = std::sync::Arc::new(crate::function_cache::LocalFunctionCache::default());
 
     let wasm_engine = component::setup_engine();
 
@@ -35,6 +36,7 @@ pub(crate) async fn run_server() {
         app_config,
         Box::new(func_scheduler),
         storage_backend,
+        function_cache,
     ));
 
     let app = crate::routes::create_routes(runtime_state.clone())

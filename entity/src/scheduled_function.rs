@@ -10,6 +10,7 @@ pub struct Model {
     pub scope_id: Uuid,
     pub name: String,
     pub cron: String,
+    pub content_hash: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

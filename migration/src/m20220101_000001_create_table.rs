@@ -86,6 +86,7 @@ impl MigrationTrait for Migration {
                     .col(string(HttpFunction::Path).not_null())
                     .col(string(HttpFunction::Method).not_null())
                     .col(boolean(HttpFunction::IsPublic).not_null())
+                    .col(string(HttpFunction::ContentHash).not_null())
                     .foreign_key(&mut http_func_scope_id_fk)
                     .to_owned(),
             )
@@ -122,6 +123,7 @@ impl MigrationTrait for Migration {
                     .col(uuid(ScheduledFunction::ScopeId).not_null())
                     .col(string(ScheduledFunction::Name).not_null())
                     .col(string(ScheduledFunction::Cron).not_null())
+                    .col(string(ScheduledFunction::ContentHash).not_null())
                     .foreign_key(&mut scheduled_func_scope_id_fk)
                     .to_owned(),
             )
@@ -202,6 +204,7 @@ enum HttpFunction {
     Path,
     Method,
     IsPublic,
+    ContentHash,
 }
 
 #[derive(DeriveIden)]
@@ -211,6 +214,7 @@ enum ScheduledFunction {
     ScopeId,
     Name,
     Cron,
+    ContentHash,
 }
 
 const IDX_UNIQUE_SCOPE_HTTP_FUNC_NAME: &str = "idx_unique_scope_http_func_name";

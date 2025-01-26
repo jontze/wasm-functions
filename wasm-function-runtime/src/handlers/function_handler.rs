@@ -8,8 +8,9 @@ use axum::{
 
 use crate::{
     bindings_function_http,
+    domain::function::WasmFunctionTrait,
     server_state::RuntimeStateRef,
-    services::{function_service, variable_service, wasm_cache_service},
+    services::{function_service, variable_service},
 };
 
 pub(crate) fn router() -> axum::Router<RuntimeStateRef> {
@@ -112,58 +113,64 @@ async fn bootstrap_function(
     let function_vars = variable_service::find_all_vars(&state.db, &path.scope)
         .await
         .expect("Failed to find variables");
-    if let Some(precompiled_bytes) = wasm_cache_service::extract_http_func(
-        &state.registry,
+
+    // Extract the target funtion from the database
+    let http_function_details = function_service::find_http_func_by_scope_and_req(
+        &state.db,
         &path.scope,
         &path.function_path,
         method,
     )
     .await
+    .expect("Failed to find function");
+
+    let http_function_details = match http_function_details {
+        Some(details) => details,
+        None => return None,
+    };
+
+    // Try to get previously compiled function from the cache
+    if let Some(cached_function_bytes) = state
+        .function_cache
+        .get(&http_function_details.related_wasm())
+        .await
     {
-        // If it is, execute the precompiled wasm
+        // Deserialize the function from the cache
         let http_function_builder = unsafe {
             crate::component::http::FunctionHttpBuilder::deserialize(
                 &state.engine,
-                &precompiled_bytes,
+                &cached_function_bytes,
             )
-        }
-        .with_variables(&function_vars);
-
-        Some(http_function_builder.build().await)
-    } else {
-        // If it is not, check the db if there is a function for the route
-        let (_, wasm_bytes) = if let Some((http_function, wasm_bytes)) =
-            function_service::find_http_func(
-                &state.db,
-                &*state.storage_backend,
-                &path.scope,
-                &path.function_path,
-                method,
-            )
-            .await
-            .expect("Failed to find function")
-        {
-            (http_function, wasm_bytes)
-        } else {
-            return None;
+            .with_variables(&function_vars)
         };
 
-        // If there is, extract it from the filesystem and compile it.
-        let http_function_builder =
-            crate::component::http::FunctionHttpBuilder::from_binary(&state.engine, &wasm_bytes)
-                .with_variables(&function_vars);
+        // Build the function
+        Some(http_function_builder.build().await)
+    } else {
+        // Extract the function from the storage backend
+        let function_bytes = state
+            .storage_backend
+            .extract_file_bytes(&http_function_details.related_wasm())
+            .await
+            .expect("Failed to get function");
 
-        // Then save the procompiled wasm to the cache registry to speed up future requests
-        let precompiled_bytes = http_function_builder.serialize();
-        wasm_cache_service::cache_http_func(
-            &state.registry,
-            &path.scope,
-            &path.function_path,
-            method,
-            &precompiled_bytes,
+        // Compile the function from the bytes
+        let http_function_builder = crate::component::http::FunctionHttpBuilder::from_binary(
+            &state.engine,
+            &function_bytes,
         )
-        .await;
+        .with_variables(&function_vars);
 
+        // Cache the compiled function
+        state
+            .function_cache
+            .insert(
+                &http_function_details.related_wasm(),
+                http_function_builder.serialize(),
+            )
+            .await;
+
+        // Build the function
         Some(http_function_builder.build().await)
     }
 }

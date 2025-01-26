@@ -5,11 +5,42 @@ use crate::{
     db::DbPool,
     domain::{self, function::WasmFunctionTrait},
     handlers::api_handler::{CreateHttpFunctionPayload, CreateScheduledFunctionPayload},
-    services::{scope_service, wasm_cache_service},
+    services::scope_service,
     storage,
 };
 
 use super::errors::ServiceError;
+
+pub(crate) async fn find_http_func_by_scope_and_req(
+    db_pool: &DbPool,
+    scope_name: &str,
+    function_path: &str,
+    function_method: &str,
+) -> Result<Option<domain::function::HttpFunction>, ServiceError> {
+    let scope = match entity::scope::Entity::find()
+        .filter(entity::scope::Column::Name.eq(scope_name))
+        .one(db_pool)
+        .await?
+    {
+        Some(scope) => scope,
+        None => return Ok(None),
+    };
+
+    let path = if function_path.starts_with('/') {
+        function_path.to_string()
+    } else {
+        format!("/{}", function_path)
+    };
+
+    let http_function = entity::http_function::Entity::find()
+        .filter(entity::http_function::Column::Path.eq(&path))
+        .filter(entity::http_function::Column::Method.eq(function_method))
+        .filter(entity::http_function::Column::ScopeId.eq(scope.id))
+        .one(db_pool)
+        .await?;
+
+    Ok(http_function.map(domain::function::HttpFunction::from))
+}
 
 pub(crate) async fn find_all_funcs(
     db_pool: &DbPool,
@@ -68,59 +99,18 @@ pub(crate) async fn find_all_scheduled_func(
         .collect())
 }
 
-pub(crate) async fn find_http_func(
-    db_pool: &DbPool,
-    storage_backend: &dyn storage::StorageBackend,
-    scope_name: &str,
-    function_path: &str,
-    function_method: &str,
-) -> Result<Option<(domain::function::HttpFunction, Vec<u8>)>, ServiceError> {
-    let scope = match entity::scope::Entity::find()
-        .filter(entity::scope::Column::Name.eq(scope_name))
-        .one(db_pool)
-        .await?
-    {
-        Some(scope) => scope,
-        None => return Ok(None),
-    };
-
-    let path = if function_path.starts_with('/') {
-        function_path.to_string()
-    } else {
-        format!("/{}", function_path)
-    };
-
-    let http_function = entity::http_function::Entity::find()
-        .filter(entity::http_function::Column::Path.eq(&path))
-        .filter(entity::http_function::Column::Method.eq(function_method))
-        .filter(entity::http_function::Column::ScopeId.eq(scope.id))
-        .one(db_pool)
-        .await?;
-
-    if let Some(http_function) = http_function.map(domain::function::HttpFunction::from) {
-        let file_name = http_function.related_wasm();
-        Ok(Some((
-            http_function,
-            storage_backend.extract_file_bytes(&file_name).await?,
-        )))
-    } else {
-        Ok(None)
-    }
-}
-
 pub(crate) async fn delete_http_func(
     db_pool: &DbPool,
-    cache: &crate::server_state::PluginRegistry,
+    func_cache: &dyn crate::function_cache::FunctionCacheBackend,
     storage_backend: &dyn storage::StorageBackend,
     function_id: &uuid::Uuid,
 ) -> Result<(), ServiceError> {
     let http_function = entity::http_function::Entity::find()
         .filter(entity::http_function::Column::Id.eq(*function_id))
-        .find_also_related(entity::scope::Entity)
         .one(db_pool)
         .await?;
 
-    if let Some((http_function, scope)) = http_function {
+    if let Some(http_function) = http_function {
         http_function.clone().delete(db_pool).await?;
 
         let http_function: domain::function::HttpFunction = http_function.into();
@@ -128,15 +118,7 @@ pub(crate) async fn delete_http_func(
             .delete_file(&http_function.related_wasm())
             .await?;
 
-        if let Some(scope) = scope {
-            wasm_cache_service::invalidate_http_func(
-                cache,
-                &scope.name,
-                &http_function.path,
-                &http_function.method,
-            )
-            .await;
-        }
+        func_cache.invalidate(&http_function.related_wasm()).await;
     }
     Ok(())
 }
@@ -190,7 +172,6 @@ pub(crate) async fn delete_scheduled_func(
 
 pub(crate) async fn create_http_func(
     db_pool: &DbPool,
-    cache_registry: &crate::server_state::PluginRegistry,
     storage_backend: &dyn crate::storage::StorageBackend,
     payload: CreateHttpFunctionPayload,
 ) -> Result<domain::function::HttpFunction, ServiceError> {
@@ -199,8 +180,6 @@ pub(crate) async fn create_http_func(
     let scope =
         crate::services::scope_service::create_or_find_scope(&transaction, &payload.scope).await?;
 
-    let mut previous_http_function: Option<entity::http_function::Model> = None;
-
     let http_function: domain::function::HttpFunction = match entity::http_function::Entity::find()
         .filter(entity::http_function::Column::ScopeId.eq(scope.uuid))
         .filter(entity::http_function::Column::Name.eq(&payload.name))
@@ -208,8 +187,6 @@ pub(crate) async fn create_http_func(
         .await?
     {
         Some(existing_http_function) => {
-            previous_http_function = Some(existing_http_function.clone());
-
             let mut existing_http_function = existing_http_function.into_active_model();
             existing_http_function.method = Set(payload.method);
             existing_http_function.scope_id = Set(scope.uuid);
@@ -226,6 +203,7 @@ pub(crate) async fn create_http_func(
                 path: Set(payload.path),
                 is_public: Set(payload.is_public),
                 scope_id: Set(scope.uuid),
+                content_hash: Set(domain::function::Function::hash(&payload.wasm_bytes)),
             }
             .insert(transaction.deref())
             .await?
@@ -236,17 +214,6 @@ pub(crate) async fn create_http_func(
     storage_backend
         .store_file(payload.wasm_bytes, &http_function.related_wasm())
         .await?;
-
-    // If there was a previous http function, invalidate the cache
-    if let Some(previous_http_function) = previous_http_function {
-        wasm_cache_service::invalidate_http_func(
-            cache_registry,
-            &scope.name,
-            previous_http_function.path.trim_start_matches('/'),
-            &previous_http_function.method,
-        )
-        .await;
-    }
 
     transaction.commit().await;
     Ok(http_function)
@@ -288,6 +255,7 @@ pub(crate) async fn create_scheduled_func(
                     name: Set(payload.name),
                     cron: Set(payload.cron),
                     scope_id: Set(scope.uuid),
+                    content_hash: Set(domain::function::Function::hash(&payload.wasm_bytes)),
                 }
                 .insert(transaction.deref())
                 .await?

@@ -70,14 +70,9 @@ async fn deploy_function_with_manifest(
                         wasm_bytes,
                     };
 
-                    function_service::create_http_func(
-                        &state.db,
-                        &state.registry,
-                        &*state.storage_backend,
-                        payload,
-                    )
-                    .await
-                    .map_err(|e| e.into_response())?;
+                    function_service::create_http_func(&state.db, &*state.storage_backend, payload)
+                        .await
+                        .map_err(|e| e.into_response())?;
                 } else {
                     return Err("HTTP function must have HTTP section in manifest".into_response());
                 }
