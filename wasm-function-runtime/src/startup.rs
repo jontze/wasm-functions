@@ -9,17 +9,21 @@ use crate::{
 };
 
 pub(crate) async fn run_server() {
+    // Setup database connection pool and run migrations
     let db_pool = db::init_pool(
         &std::env::var("DATABASE_URL").expect("DATABASE_URL environment variable must be set"),
     )
     .await;
     db::run_migrations(&db_pool).await;
 
-    let storage_backend = std::sync::Arc::new(crate::storage::CachedStorage::default());
+    // Setup storage backend and function cache
+    let mut storage_backend = std::sync::Arc::new(crate::storage::CachedStorage::default());
     let function_cache = std::sync::Arc::new(crate::function_cache::LocalFunctionCache::default());
 
+    // Setup WASI engine
     let wasm_engine = component::setup_engine();
 
+    // Setup function scheduler
     let func_scheduler = scheduler::FunctionSchedulerImpl::new(
         db_pool.clone(),
         wasm_engine.clone(),
@@ -28,8 +32,22 @@ pub(crate) async fn run_server() {
     .await;
     scheduler::run_scheduler(&func_scheduler, &db_pool).await;
 
+    // Load application configuration
     let app_config = crate::config::AppConfig::load();
 
+    // If Minio storage is configured, use it instead of the default file system storage
+    if let Some(minio_config) = &app_config.minio_storage {
+        let minio_storage_backend = Box::new(crate::storage::GeneralS3::new(
+            &minio_config.endpoint,
+            &minio_config.access_key,
+            &minio_config.secret_key,
+            &minio_config.bucket,
+        ));
+        storage_backend =
+            std::sync::Arc::new(crate::storage::CachedStorage::new(minio_storage_backend));
+    }
+
+    // Init server state
     let runtime_state: RuntimeStateRef = std::sync::Arc::new(RuntimeState::new(
         db_pool,
         wasm_engine,
@@ -39,6 +57,7 @@ pub(crate) async fn run_server() {
         function_cache,
     ));
 
+    // Setup server with handlers and middlewares
     let app = crate::routes::create_routes(runtime_state.clone())
         .with_state(runtime_state)
         .layer(
