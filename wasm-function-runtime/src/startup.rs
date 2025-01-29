@@ -37,7 +37,7 @@ pub(crate) async fn run_server() {
 
     // If Minio storage is configured, use it instead of the default file system storage
     if let Some(minio_config) = &app_config.minio_storage {
-        let minio_storage_backend = Box::new(crate::storage::GeneralS3::new(
+        let minio_storage_backend = Box::new(crate::storage::GeneralS3::new_minio(
             &minio_config.endpoint,
             &minio_config.access_key,
             &minio_config.secret_key,
@@ -45,6 +45,30 @@ pub(crate) async fn run_server() {
         ));
         storage_backend =
             std::sync::Arc::new(crate::storage::CachedStorage::new(minio_storage_backend));
+    }
+
+    // If Azure Blob storage is configured, use it instead of the default file system storage
+    if let Some(azure_config) = &app_config.azure_storage {
+        let azure_storage_backend = Box::new(crate::storage::GeneralS3::new_azure(
+            &azure_config.account,
+            &azure_config.access_key,
+            &azure_config.container,
+        ));
+        storage_backend =
+            std::sync::Arc::new(crate::storage::CachedStorage::new(azure_storage_backend));
+    }
+
+    // If Hetzner storage is configured, use it instead of the default file system storage
+    if let Some(hetzner_config) = &app_config.hetzner_storage {
+        let hetzner_storage_backend = Box::new(crate::storage::GeneralS3::new_hetzner(
+            &hetzner_config.access_key,
+            &hetzner_config.secret_key,
+            &hetzner_config.bucket_url,
+            &hetzner_config.bucket_name,
+            &hetzner_config.region,
+        ));
+        storage_backend =
+            std::sync::Arc::new(crate::storage::CachedStorage::new(hetzner_storage_backend));
     }
 
     // Init server state

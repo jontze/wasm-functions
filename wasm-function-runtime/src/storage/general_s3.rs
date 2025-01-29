@@ -1,5 +1,5 @@
 use axum::body::Bytes;
-use object_store::{aws::AmazonS3Builder, ObjectStore};
+use object_store::{aws::AmazonS3Builder, azure::MicrosoftAzureBuilder, ObjectStore};
 
 use super::StorageBackend;
 
@@ -8,7 +8,7 @@ pub(crate) struct GeneralS3 {
 }
 
 impl GeneralS3 {
-    pub(crate) fn new(
+    pub(crate) fn new_minio(
         bucket_url: &str,
         access_key_id: &str,
         secret_access_key: &str,
@@ -24,6 +24,42 @@ impl GeneralS3 {
         if bucket_url.starts_with("http://") {
             s3_builder = s3_builder.with_allow_http(true);
         }
+
+        let s3 = s3_builder.build().expect("Error creating S3 client");
+
+        Self {
+            object_store: Box::new(s3),
+        }
+    }
+
+    pub(crate) fn new_azure(account: &str, access_key: &str, container: &str) -> Self {
+        let azure_builder = MicrosoftAzureBuilder::new()
+            .with_account(account)
+            .with_access_key(access_key)
+            .with_container_name(container);
+
+        let azure = azure_builder
+            .build()
+            .expect("Error creating Azure Blob client");
+
+        Self {
+            object_store: Box::new(azure),
+        }
+    }
+
+    pub(crate) fn new_hetzner(
+        access_key: &str,
+        secret_key: &str,
+        bucket_url: &str,
+        bucket_name: &str,
+        region: &str,
+    ) -> Self {
+        let s3_builder = AmazonS3Builder::new()
+            .with_access_key_id(access_key)
+            .with_secret_access_key(secret_key)
+            .with_region(region)
+            .with_endpoint(bucket_url)
+            .with_bucket_name(bucket_name);
 
         let s3 = s3_builder.build().expect("Error creating S3 client");
 
