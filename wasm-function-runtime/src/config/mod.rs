@@ -3,6 +3,7 @@ pub(crate) struct AppConfig {
     pub minio_storage: Option<MinioStorageConfig>,
     pub azure_storage: Option<AzureStorageConfig>,
     pub hetzner_storage: Option<HetznerStorageConfig>,
+    pub redis_cache: Option<RedisCacheConfig>,
 }
 
 pub(crate) struct OpenIdConnectConfig {
@@ -194,6 +195,32 @@ pub(crate) struct HetznerStorageConfig {
     pub region: String,
 }
 
+struct RedisCacheConfigBuilder {
+    connection_str: Option<String>,
+}
+
+impl RedisCacheConfigBuilder {
+    fn new() -> Self {
+        Self {
+            connection_str: None,
+        }
+    }
+
+    fn with_connection_str(&mut self, connection_str: String) {
+        self.connection_str = Some(connection_str);
+    }
+
+    fn build(self) -> Option<RedisCacheConfig> {
+        let connection_str = self.connection_str?;
+
+        Some(RedisCacheConfig { connection_str })
+    }
+}
+
+pub struct RedisCacheConfig {
+    pub connection_str: String,
+}
+
 impl Loader for AppConfig {
     fn load() -> Self {
         // Tryto Build MinioStorageConfig
@@ -250,11 +277,19 @@ impl Loader for AppConfig {
             panic!("Multiple storage backends are configured");
         }
 
+        // Try to build RedisCacheConfig
+        let mut redis_cache_config_builder = RedisCacheConfigBuilder::new();
+        if let Ok(connection_str) = std::env::var("REDIS_CONNECTION") {
+            redis_cache_config_builder.with_connection_str(connection_str);
+        }
+        let redis_cache = redis_cache_config_builder.build();
+
         Self {
             openid_connect: OpenIdConnectConfig::load(),
             minio_storage,
             azure_storage,
             hetzner_storage,
+            redis_cache,
         }
     }
 }

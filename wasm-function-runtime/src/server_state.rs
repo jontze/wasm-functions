@@ -9,7 +9,7 @@ pub(crate) struct RuntimeState {
     pub app_config: crate::config::AppConfig,
     pub scheduler_manager: Box<dyn crate::scheduler::FunctionSchedulerManagerTrait>,
     pub storage_backend: std::sync::Arc<dyn crate::storage::StorageBackend>,
-    pub function_cache: std::sync::Arc<dyn crate::function_cache::FunctionCacheBackend>,
+    pub cache_backend: std::sync::Arc<dyn crate::cache::CacheBackend>,
 }
 
 impl RuntimeState {
@@ -19,7 +19,7 @@ impl RuntimeState {
         app_config: crate::config::AppConfig,
         scheduler_manager: Box<dyn crate::scheduler::FunctionSchedulerManagerTrait>,
         storage_backend: std::sync::Arc<dyn crate::storage::StorageBackend>,
-        function_cache: std::sync::Arc<dyn crate::function_cache::FunctionCacheBackend>,
+        cache_backend: std::sync::Arc<dyn crate::cache::CacheBackend>,
     ) -> Self {
         let jwk_cache = moka::future::Cache::builder()
             .time_to_live(std::time::Duration::from_secs(
@@ -34,7 +34,7 @@ impl RuntimeState {
             app_config,
             scheduler_manager,
             storage_backend,
-            function_cache,
+            cache_backend,
         }
     }
 }

@@ -101,7 +101,7 @@ pub(crate) async fn find_all_scheduled_func(
 
 pub(crate) async fn delete_http_func(
     db_pool: &DbPool,
-    func_cache: &dyn crate::function_cache::FunctionCacheBackend,
+    cache_backend: &dyn crate::cache::CacheBackend,
     storage_backend: &dyn storage::StorageBackend,
     function_id: &uuid::Uuid,
 ) -> Result<(), ServiceError> {
@@ -118,7 +118,9 @@ pub(crate) async fn delete_http_func(
             .delete_file(&http_function.related_wasm())
             .await?;
 
-        func_cache.invalidate(&http_function.related_wasm()).await;
+        cache_backend
+            .invalidate(&http_function.related_wasm())
+            .await?;
     }
     Ok(())
 }

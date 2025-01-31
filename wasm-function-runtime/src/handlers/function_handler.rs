@@ -129,11 +129,14 @@ async fn bootstrap_function(
         None => return None,
     };
 
+    let precompiled_cache_key = format!("pre-{}", http_function_details.related_wasm());
+
     // Try to get previously compiled function from the cache
     if let Some(cached_function_bytes) = state
-        .function_cache
-        .get(&http_function_details.related_wasm())
+        .cache_backend
+        .get(&precompiled_cache_key)
         .await
+        .expect("Failed to interact with cache")
     {
         // Deserialize the function from the cache
         let http_function_builder = unsafe {
@@ -163,12 +166,10 @@ async fn bootstrap_function(
 
         // Cache the compiled function
         state
-            .function_cache
-            .insert(
-                &http_function_details.related_wasm(),
-                http_function_builder.serialize(),
-            )
-            .await;
+            .cache_backend
+            .insert(&precompiled_cache_key, http_function_builder.serialize())
+            .await
+            .expect("Failed to cache function");
 
         // Build the function
         Some(http_function_builder.build().await)

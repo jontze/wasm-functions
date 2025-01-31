@@ -74,7 +74,7 @@ async fn delete_http_function(
 ) -> impl IntoResponse {
     function_service::delete_http_func(
         &state.db,
-        &*state.function_cache,
+        &*state.cache_backend,
         &*state.storage_backend,
         &path.function_id,
     )

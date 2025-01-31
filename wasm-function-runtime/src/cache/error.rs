@@ -8,23 +8,16 @@ use thiserror::Error;
 use crate::utils::ErrorResponse;
 
 #[derive(Debug, Error)]
-pub(crate) enum StorageError {
-    #[error("Unable to create storage directory")]
-    CreateStorageDirectory,
-    #[error("Unable to write file")]
+pub(crate) enum CacheError {
+    #[error("Unable to write to cache")]
     Write,
-    #[error("Unable to read file")]
+    #[error("Unable to read from cache")]
     Read,
-    #[error("Unable to delete file")]
+    #[error("Unable to delete item from cache")]
     Delete,
-    #[error("Cache backend error")]
-    CacheError {
-        #[from]
-        source: crate::cache::error::CacheError,
-    },
 }
 
-impl IntoResponse for StorageError {
+impl IntoResponse for CacheError {
     fn into_response(self) -> Response {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
