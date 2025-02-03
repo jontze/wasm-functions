@@ -1,3 +1,5 @@
+use sea_orm::{EnumIter, Iterable};
+
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(DeriveMigrationName)]
@@ -141,6 +143,27 @@ impl MigrationTrait for Migration {
                     .to_owned(),
             )
             .await?;
+
+        // ***************************
+        // **** Start Service Registry Table
+        // ***************************
+        manager
+            .create_table(
+                Table::create()
+                    .if_not_exists()
+                    .table(Service::Table)
+                    .col(pk_uuid(Service::Id).not_null().unique_key())
+                    .col(string(Service::Address).not_null())
+                    .col(
+                        enumeration(Service::Status, Alias::new("status"), ServiceStatus::iter())
+                            .not_null(),
+                    )
+                    .col(date_time(Service::LastHeartbeat).not_null())
+                    .col(date_time(Service::JoinedAt).not_null())
+                    .to_owned(),
+            )
+            .await?;
+
         Ok(())
     }
 
@@ -189,6 +212,10 @@ impl MigrationTrait for Migration {
 
         manager
             .drop_table(Table::drop().if_exists().table(Scope::Table).to_owned())
+            .await?;
+
+        manager
+            .drop_table(Table::drop().if_exists().table(Service::Table).to_owned())
             .await?;
 
         Ok(())
@@ -244,4 +271,28 @@ enum Secret {
     ScopeId,
     Name,
     Value,
+}
+
+#[derive(DeriveIden)]
+enum Service {
+    Table,
+    Id,
+    Address,
+    Status,
+    LastHeartbeat,
+    JoinedAt,
+}
+
+#[derive(Iden, EnumIter)]
+enum ServiceStatus {
+    #[iden = "up"]
+    Up,
+    #[iden = "down"]
+    Down,
+    #[iden = "joining"]
+    Joining,
+    #[iden = "leaving"]
+    Leaving,
+    #[iden = "unknown"]
+    Unknown,
 }
