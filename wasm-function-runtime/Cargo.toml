@@ -33,7 +33,7 @@ sea-orm = { version = "1.1.4", features = [
 migration = { path = "../migration" }
 entity = { path = "../entity" }
 serde = { version = "1.0.217", features = ["derive"] }
-toml = "0.8.19"
+toml = "0.8.20"
 http = "1.2.0"
 moka = { version = "0.12.10", features = ["future"] }
 wasmtime-wasi-http = "29.0.1"
