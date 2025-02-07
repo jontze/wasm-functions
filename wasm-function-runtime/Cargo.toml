@@ -38,7 +38,7 @@ http = "1.2.0"
 moka = { version = "0.12.10", features = ["future"] }
 wasmtime-wasi-http = "29.0.1"
 tower = "0.5.2"
-jsonwebtoken = "9.3.0"
+jsonwebtoken = "9.3.1"
 reqwest = { version = "0.12.12", default-features = false, features = [
     "rustls-tls",
     "json",
