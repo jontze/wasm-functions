@@ -20,4 +20,4 @@ reqwest = { version = "0.12.12", default-features = false, features = [
 serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.137"
 spinner = "0.5.0"
-tabled = "0.17.0"
+tabled = "0.18.0"
