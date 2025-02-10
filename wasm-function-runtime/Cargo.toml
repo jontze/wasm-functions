@@ -44,7 +44,7 @@ reqwest = { version = "0.12.12", default-features = false, features = [
     "rustls-tls",
     "json",
 ] }
-strum = { version = "0.26.3", features = ["derive"] }
+strum = { version = "0.27.0", features = ["derive"] }
 tokio-cron-scheduler = { version = "0.13.0", features = ["tracing-subscriber"] }
 async-trait = "0.1.86"
 thiserror = "2.0.11"
