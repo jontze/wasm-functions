@@ -12,7 +12,18 @@ jobs:
       build: true
       unit-tests: true
 
+  build-cli:
+    needs:
+      - test
+    name: Build CLI
+    uses: jontze/.workflows/.github/workflows/rust_platform_binaries.yaml@main
+    with:
+      name: "wasm-function-cli"
+      version: "main"
+    secrets: inherit
+
   push-image:
+    if: false
     needs:
       - test
     permissions:
