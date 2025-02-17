@@ -19,8 +19,9 @@ jobs:
       contents: read
       packages: write
     name: Publish Image
-    uses: ./.github/workflows/image.yml
+    uses: jontze/.workflows/.github/workflows/image_publish.yaml@main
     with:
       image_name: "wasm-function-runtime"
       push: true
+      cache_from_tag: "main"
     secrets: inherit
