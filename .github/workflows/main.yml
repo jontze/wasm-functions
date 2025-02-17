@@ -11,3 +11,12 @@ jobs:
     with:
       build: true
       unit-tests: true
+
+  push-image:
+    needs:
+      - test
+    name: Publish Image
+    uses: jontze/.workflows/.github/workflows/image.yaml@main
+    with:
+      image_name: "wasm-function-runtime"
+      push: true
