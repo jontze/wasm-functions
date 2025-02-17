@@ -20,10 +20,10 @@ jobs:
     with:
       name: "wasm-function-cli"
       version: "main"
+      retention_days: 7
     secrets: inherit
 
   push-image:
-    if: false
     needs:
       - test
     permissions:
