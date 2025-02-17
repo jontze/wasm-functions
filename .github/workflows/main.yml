@@ -15,8 +15,12 @@ jobs:
   push-image:
     needs:
       - test
+    permissions:
+      contents: read
+      packages: write
     name: Publish Image
     uses: ./.github/workflows/image.yml
     with:
       image_name: "wasm-function-runtime"
       push: true
+    secrets: inherit
