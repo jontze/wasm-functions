@@ -121,3 +121,35 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+wasmFunctionRuntime:
+  databaseUrl: ""
+  log: "wasm_function_runtime=info,tower_http=info,info"
+  oidc:
+    jwksUrl: ""
+    issuerUrl: ""
+    clientId: ""
+  cache:
+    redis:
+      enabled: false
+      connectionString: ""
+    storage:
+      azure:
+        enabled: false
+        storageAccountName: ""
+        storageAccountKey: ""
+        containerName: ""
+      hetzner:
+        enabled: false
+        accessKey: ""
+        secretKey: ""
+        bucketName: ""
+        bucketRegion: ""
+        bucketUrl: ""
+      minio:
+        enabled: false
+        endpoint: ""        
+        accessKey: ""
+        secretKey: ""
+        bucketName: ""
+    
