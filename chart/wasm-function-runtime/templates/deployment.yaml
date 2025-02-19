@@ -44,6 +44,83 @@ spec:
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
+          env:
+          # Pass all general configuration to the container
+            - configMapRef: 
+                name: {{ include "wasm-function-runtime.fullname" . }}-general
+          # Configure Database Access
+          {{- if .Values.wasmFunctionRuntime.database.existingSecretRef.name }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.wasmFunctionRuntime.database.existingSecretRef.name }}
+                  key: {{ .Values.wasmFunctionRuntime.database.existingSecretRef.connectionStringKey }}
+          {{- else }}
+            - secretRef:
+                name: {{ include "wasm-function-runtime.fullname" . }}-database
+          {{- end }}
+          {{- if .Values.wasmFunctionRuntime.cache.redis.enabled }}
+          # Configure Redis Access, if enabled
+          {{- if .Values.wasmFunctionRuntime.cache.redis.existingSecretRef.name }}
+            - name: REDIS_CONNECTION
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.wasmFunctionRuntime.cache.redis.existingSecretRef.name }}
+                  key: {{ .Values.wasmFunctionRuntime.cache.redis.existingSecretRef.connectionStringKey }}
+          {{- else }}
+            - secretRef:
+                name: {{ include "wasm-function-runtime.fullname" . }}-redis
+          {{- end }}
+          {{- end }}
+          {{- if .Values.wasmFunctionRuntime.storage.azure.enabled }}
+          # Configure Azure Storage Account Access, if enabled
+          {{- if .Values.wasmFunctionRuntime.storage.azure.existingSecretRef.name }}
+            - name: AZURE_STORAGE_ACCOUNT_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.wasmFunctionRuntime.storage.azure.existingSecretRef.name }}
+                  key: {{ .Values.wasmFunctionRuntime.storage.azure.existingSecretRef.storageAccountKeyKey }}
+          {{- else }}
+            - secretRef:
+                name: {{ include "wasm-function-runtime.fullname" . }}-storage-azure          
+          {{- end }}
+          {{- end }}
+          {{- if .Values.wasmFunctionRuntime.storage.hetzner.enabled }}
+          # Configure Hetzner Bucket Access, if enabled
+          {{- if .Values.wasmFunctionRuntime.storage.hetzner.existingSecretRef.name }}
+            - name: HETZNER_BUCKET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.wasmFunctionRuntime.storage.hetzner.existingSecretRef.name }}
+                  key: {{ .Values.wasmFunctionRuntime.storage.hetzner.existingSecretRef.accessKeyKey }}
+            - name: HETZNER_BUCKET_ACCESS_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.wasmFunctionRuntime.storage.hetzner.existingSecretRef.name }}
+                  key: {{ .Values.wasmFunctionRuntime.storage.hetzner.existingSecretRef.secretKeyKey }}
+          {{- else }}
+            - secretRef:
+                name: {{ include "wasm-function-runtime.fullname" . }}-storage-hetzner
+          {{- end }}
+          {{- end }}
+          {{- if .Values.wasmFunctionRuntime.storage.minio.enabled }}
+          # Configure Minio Bucket Access, if enabled
+          {{- if .Values.wasmFunctionRuntime.storage.minio.existingSecretRef.name }}
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.wasmFunctionRuntime.storage.minio.existingSecretRef.name }}
+                  key: {{ .Values.wasmFunctionRuntime.storage.minio.existingSecretRef.accessKeyKey }}
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.wasmFunctionRuntime.storage.minio.existingSecretRef.name }}
+                  key: {{ .Values.wasmFunctionRuntime.storage.minio.existingSecretRef.secretKeyKey }}
+          {{- else }}
+            - secretRef:
+                name: {{ include "wasm-function-runtime.fullname" . }}-storage-minio
+          {{- end }}
+          {{- end }}
           {{- with .Values.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}
