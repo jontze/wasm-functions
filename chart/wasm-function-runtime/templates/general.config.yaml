@@ -6,3 +6,6 @@ metadata:
     {{- include "wasm-function-runtime.labels" . | nindent 4 }}
 data:
   RUST_LOG: {{ .Values.wasmFunctionRuntime.log }}
+  OIDC_JWKS_URI: {{ .Values.wasmFunctionRuntime.oidc.jwksUrl }}
+  OIDC_ISSUER: {{ .Values.wasmFunctionRuntime.oidc.issuerUrl }}
+  OIDC_CLIENT_ID: {{ .Values.wasmFunctionRuntime.oidc.clientId }}
