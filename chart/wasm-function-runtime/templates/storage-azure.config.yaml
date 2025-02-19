@@ -1,0 +1,11 @@
+{{- if .Values.wasmFunctionRuntime.storage.azure.enabled }}
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: {{ include "wasm-function-runtime.fullname" . }}-storage-azure
+  labels:
+    {{- include "wasm-function-runtime.labels" . | nindent 4 }}
+data:
+  AZURE_STORAGE_ACCOUNT_NAME: {{ .Values.wasmFunctionRuntime.storage.azure.storageAccountName }}
+  AZURE_STORAGE_ACCOUNT_BUCKET_NAME: {{ .Values.wasmFunctionRuntime.storage.azure.containerName }}
+{{- end }}

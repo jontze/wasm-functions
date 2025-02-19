@@ -1,0 +1,12 @@
+{{- if .Values.wasmFunctionRuntime.storage.hetzner.enabled }}
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: {{ include "wasm-function-runtime.fullname" . }}-storage-hetzner
+  labels:
+    {{- include "wasm-function-runtime.labels" . | nindent 4 }}
+data:
+  HETZNER_BUCKET_URL: {{ .Values.wasmFunctionRuntime.storage.hetzner.bucketUrl }}
+  HETZNER_BUCKET_NAME: {{ .Values.wasmFunctionRuntime.storage.hetzner.bucketName }}
+  HETZNER_BUCKET_REGION: {{ .Values.wasmFunctionRuntime.storage.hetzner.bucketRegion }}
+{{- end }}
