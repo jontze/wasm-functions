@@ -1,0 +1,13 @@
+name: Charts Main
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "chart/**"
+
+jobs:
+  test:
+    name: Test
+    uses: ./.github/workflows/chart_test.yaml
+    secrets: inherit

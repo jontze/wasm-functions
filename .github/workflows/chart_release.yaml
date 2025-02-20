@@ -1,0 +1,46 @@
+name: Charts Main
+on:
+  push:
+    tags:
+      - "chart-"
+
+jobs:
+  test:
+    name: Test
+    uses: ./.github/workflows/chart_test.yaml
+    secrets: inherit
+
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    needs:
+      - test
+    permissions:
+      contents: read
+      packages: write
+    env:
+      OCI_MANIFESTS_BASE_URL: "oci://ghcr.io/jontze/charts"
+      OCI_MANIFESTS_REPO: "oci://ghcr.io/jontze/charts/wasm-function-runtime"
+      OCI_MANIFESTS_PATH: "./chart/wasm-function-runtime"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Helm Login
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username jontze --password-stdin
+      - name: Login to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: jontze
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup flux cli
+        uses: fluxcd/flux2/action@main
+      - name: Push Helm Manifests to OCI Image
+        run: |
+          export CHART_VERSION=$(helm show chart $OCI_MANIFESTS_PATH | yq e '.version' -)          
+          helm package $OCI_MANIFESTS_PATH
+          helm push rustify-rss-$CHART_VERSION.tgz $OCI_MANIFESTS_BASE_URL          
+          flux tag artifact $OCI_MANIFESTS_REPO:$CHART_VERSION \
+            --tag latest \
+            --tag $(git rev-parse --short HEAD)
