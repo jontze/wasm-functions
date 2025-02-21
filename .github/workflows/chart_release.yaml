@@ -2,7 +2,7 @@ name: Charts Main
 on:
   push:
     tags:
-      - "chart-"
+      - "chart-v*"
 
 jobs:
   test:
