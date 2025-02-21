@@ -44,10 +44,11 @@ spec:
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
-          env:
+          envFrom:
           # Pass all general configuration to the container
-            - configMapRef: 
+            - configMapRef:
                 name: {{ include "wasm-function-runtime.fullname" . }}-general
+          env:            
           # Configure Database Access
             - name: DATABASE_URL
               {{- if .Values.wasmFunctionRuntime.database.existingSecretRef.name }}
