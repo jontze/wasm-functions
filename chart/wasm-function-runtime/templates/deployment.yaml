@@ -49,15 +49,14 @@ spec:
             - configMapRef: 
                 name: {{ include "wasm-function-runtime.fullname" . }}-general
           # Configure Database Access
-          {{- if .Values.wasmFunctionRuntime.database.existingSecretRef.name }}
             - name: DATABASE_URL
+              {{- if .Values.wasmFunctionRuntime.database.existingSecretRef.name }}
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.wasmFunctionRuntime.database.existingSecretRef.name }}
                   key: {{ .Values.wasmFunctionRuntime.database.existingSecretRef.connectionStringKey }}
-          {{- else }}
-            - secretRef:
-                name: {{ include "wasm-function-runtime.fullname" . }}-database
+              {{- else }}
+              value: {{ .Values.wasmFunctionRuntime.database.connectionString }}
           {{- end }}
           {{- if .Values.wasmFunctionRuntime.cache.redis.enabled }}
           # Configure Redis Access, if enabled
