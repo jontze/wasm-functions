@@ -40,7 +40,7 @@ jobs:
         run: |
           export CHART_VERSION=$(helm show chart $OCI_MANIFESTS_PATH | yq e '.version' -)          
           helm package $OCI_MANIFESTS_PATH
-          helm push rustify-rss-$CHART_VERSION.tgz $OCI_MANIFESTS_BASE_URL          
+          helm push wasm-function-runtime-$CHART_VERSION.tgz $OCI_MANIFESTS_BASE_URL          
           flux tag artifact $OCI_MANIFESTS_REPO:$CHART_VERSION \
             --tag latest \
             --tag $(git rev-parse --short HEAD)
