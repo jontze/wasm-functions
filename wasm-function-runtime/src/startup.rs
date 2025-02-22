@@ -51,7 +51,11 @@ pub(crate) async fn run_server() {
                 &hetzner_config.region,
             ))
         } else {
-            Box::new(crate::storage::file_system::FileSystemStorage::default())
+            Box::new(if let Some(storage_dir) = &app_config.local_storage_dir {
+                crate::storage::file_system::FileSystemStorage::new(storage_dir)
+            } else {
+                crate::storage::file_system::FileSystemStorage::default()
+            })
         };
     let storage_backend = std::sync::Arc::new(crate::storage::CachedStorage::new(
         storage_backend,

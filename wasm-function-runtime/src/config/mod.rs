@@ -1,4 +1,5 @@
 pub(crate) struct AppConfig {
+    pub local_storage_dir: Option<String>,
     pub openid_connect: OpenIdConnectConfig,
     pub minio_storage: Option<MinioStorageConfig>,
     pub azure_storage: Option<AzureStorageConfig>,
@@ -223,6 +224,9 @@ pub struct RedisCacheConfig {
 
 impl Loader for AppConfig {
     fn load() -> Self {
+        // Load the local storage directory if available
+        let local_storage_dir = std::env::var("LOCAL_STORAGE_DIR").ok();
+
         // Tryto Build MinioStorageConfig
         let mut minio_storage_config_builder = MinioStorageConfigBuilder::new();
         if let Ok(endpoint) = std::env::var("MINIO_ENDPOINT") {
@@ -285,6 +289,7 @@ impl Loader for AppConfig {
         let redis_cache = redis_cache_config_builder.build();
 
         Self {
+            local_storage_dir,
             openid_connect: OpenIdConnectConfig::load(),
             minio_storage,
             azure_storage,

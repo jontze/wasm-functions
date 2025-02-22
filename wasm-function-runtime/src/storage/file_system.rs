@@ -12,9 +12,9 @@ pub(crate) struct FileSystemStorage {
 }
 
 impl FileSystemStorage {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(storage_dir: &str) -> Self {
         Self {
-            function_dir: "wasm_functions".to_string(),
+            function_dir: storage_dir.to_string(),
         }
     }
 
@@ -25,7 +25,7 @@ impl FileSystemStorage {
 
 impl Default for FileSystemStorage {
     fn default() -> Self {
-        Self::new()
+        Self::new("./data/functions")
     }
 }
 
