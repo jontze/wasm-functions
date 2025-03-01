@@ -4,4 +4,5 @@ pub use super::http_function::Entity as HttpFunction;
 pub use super::scheduled_function::Entity as ScheduledFunction;
 pub use super::scope::Entity as Scope;
 pub use super::secret::Entity as Secret;
+pub use super::service::Entity as Service;
 pub use super::variable::Entity as Variable;
