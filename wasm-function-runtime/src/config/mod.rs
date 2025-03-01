@@ -1,4 +1,5 @@
 pub(crate) struct AppConfig {
+    pub port: u16,
     pub local_storage_dir: Option<String>,
     pub openid_connect: OpenIdConnectConfig,
     pub minio_storage: Option<MinioStorageConfig>,
@@ -224,6 +225,12 @@ pub struct RedisCacheConfig {
 
 impl Loader for AppConfig {
     fn load() -> Self {
+        // Get the port from the environment or fallback to 3000
+        let port = std::env::var("RUNTIME_PORT")
+            .ok()
+            .and_then(|port| port.parse().ok())
+            .unwrap_or(3000);
+
         // Load the local storage directory if available
         let local_storage_dir = std::env::var("LOCAL_STORAGE_DIR").ok();
 
@@ -289,6 +296,7 @@ impl Loader for AppConfig {
         let redis_cache = redis_cache_config_builder.build();
 
         Self {
+            port,
             local_storage_dir,
             openid_connect: OpenIdConnectConfig::load(),
             minio_storage,
