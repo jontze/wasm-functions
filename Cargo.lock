@@ -5101,7 +5101,7 @@ name = "wasm-function-sdk"
 version = "0.1.0"
 dependencies = [
  "wit-bindgen 0.39.0",
- "wit-bindgen-rt 0.39.0",
+ "wit-bindgen-rt 0.40.0",
 ]
 
 [[package]]
@@ -5994,6 +5994,17 @@ name = "wit-bindgen-rt"
 version = "0.39.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6f42320e61fe2cfd34354ecb597f86f413484a798ba44a8ca1165c58d42da6c1"
+dependencies = [
+ "bitflags",
+ "futures",
+ "once_cell",
+]
+
+[[package]]
+name = "wit-bindgen-rt"
+version = "0.40.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68faed92ae696b93ea9a7b67ba6c37bf09d72c6d9a70fa824a743c3020212f11"
 dependencies = [
  "bitflags",
  "futures",

@@ -11,7 +11,7 @@ async = ["dep:wit-bindgen-rt"]
 
 [dependencies]
 wit-bindgen = "0.39.0"
-wit-bindgen-rt = { version = "0.39.0", features = [
+wit-bindgen-rt = { version = "0.40.0", features = [
     "async",
     "bitflags",
 ], optional = true }
