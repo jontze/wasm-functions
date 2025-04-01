@@ -24,7 +24,7 @@ wasmtime = { version = "29.0.1", features = [
     "cranelift",
 ] }
 wasmtime-wasi = "29.0.1"
-sea-orm = { version = "1.1.7", features = [
+sea-orm = { version = "1.1.8", features = [
     "sqlx-sqlite",
     "sqlx-postgres",
     "runtime-tokio-rustls",
