@@ -1,4 +1,4 @@
-use wasmtime_wasi::{ResourceTable, WasiCtx, WasiCtxBuilder, WasiView};
+use wasmtime_wasi::{IoView, ResourceTable, WasiCtx, WasiCtxBuilder, WasiView};
 
 pub(crate) mod http;
 pub(crate) mod scheduled;
@@ -49,21 +49,20 @@ pub(crate) struct ComponentState {
     table: ResourceTable,
 }
 
+impl IoView for ComponentState {
+    fn table(&mut self) -> &mut ResourceTable {
+        &mut self.table
+    }
+}
+
 impl WasiView for ComponentState {
     fn ctx(&mut self) -> &mut WasiCtx {
         &mut self.ctx
-    }
-    fn table(&mut self) -> &mut ResourceTable {
-        &mut self.table
     }
 }
 
 impl wasmtime_wasi_http::WasiHttpView for ComponentState {
     fn ctx(&mut self) -> &mut wasmtime_wasi_http::WasiHttpCtx {
         &mut self.http_ctx
-    }
-
-    fn table(&mut self) -> &mut ResourceTable {
-        &mut self.table
     }
 }
