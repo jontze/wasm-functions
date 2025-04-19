@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 base64 = "0.22.1"
-clap = { version = "4.5.36", features = ["derive"] }
+clap = { version = "4.5.37", features = ["derive"] }
 dirs = "6.0.0"
 dotenv = "0.15.0"
 indicatif = "0.17.9"
