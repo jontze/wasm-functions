@@ -45,7 +45,7 @@ reqwest = { version = "0.12.15", default-features = false, features = [
     "json",
 ] }
 strum = { version = "0.27.1", features = ["derive"] }
-tokio-cron-scheduler = { version = "0.13.0", features = ["tracing-subscriber"] }
+tokio-cron-scheduler = { version = "0.14.0", features = ["tracing-subscriber"] }
 async-trait = "0.1.88"
 thiserror = "2.0.12"
 sha2 = "0.10.9"
