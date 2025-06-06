@@ -51,4 +51,4 @@ thiserror = "2.0.12"
 sha2 = "0.10.9"
 hex = "0.4.3"
 object_store = { version = "0.12.1", features = ["aws", "azure"] }
-redis = { version = "0.31.0", features = ["connection-manager", "tokio-comp"] }
+redis = { version = "0.32.0", features = ["connection-manager", "tokio-comp"] }
