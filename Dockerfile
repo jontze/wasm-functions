@@ -1,4 +1,4 @@
-FROM clux/muslrust:1.87.0-stable AS build_base
+FROM clux/muslrust:1.88.0-stable AS build_base
 USER root
 RUN cargo install cargo-chef
 WORKDIR /runtime
