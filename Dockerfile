@@ -27,7 +27,7 @@ ENV CARGO_TERM_COLOR=always
 # Build and cache only the app with the previously built dependencies
 RUN cargo build --release --bin wasm-function-runtime --target x86_64-unknown-linux-musl && mkdir -p /runtime/data/db && mkdir -p /runtime/data/functions
 
-FROM gcr.io/distroless/static@sha256:b7b9a6953e7bed6baaf37329331051d7bdc1b99c885f6dbeb72d75b1baad54f9 AS runtime
+FROM gcr.io/distroless/static@sha256:2e114d20aa6371fd271f854aa3d6b2b7d2e70e797bb3ea44fb677afec60db22c AS runtime
 WORKDIR /runtime
 COPY --from=builder --chown=nonroot:nonroot --chmod=700 /runtime/data data
 COPY --from=builder --chown=nonroot:nonroot /runtime/target/x86_64-unknown-linux-musl/release/wasm-function-runtime wasm-function-runtime
