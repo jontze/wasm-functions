@@ -24,7 +24,7 @@ jobs:
       OCI_MANIFESTS_PATH: "./chart/wasm-function-runtime"
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Helm Login
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username jontze --password-stdin
