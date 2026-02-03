@@ -10,8 +10,8 @@ blocking = []
 async = ["dep:wit-bindgen-rt"]
 
 [dependencies]
-wit-bindgen = "0.42.1"
-wit-bindgen-rt = { version = "0.42.1", features = [
+wit-bindgen = "0.52.0"
+wit-bindgen-rt = { version = "0.44.0", features = [
     "async",
     "bitflags",
 ], optional = true }
